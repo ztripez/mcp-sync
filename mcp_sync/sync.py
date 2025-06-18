@@ -48,27 +48,21 @@ class SyncEngine:
             global_config = self.config_manager.get_global_config()
             global_servers = global_config.get("mcpServers", {})
             for name, config in global_servers.items():
-                master_servers[name] = {**config, "_source": "global", "_priority": 1}
+                master_servers[name] = {**config, "_source": "global"}
 
-        # Add project servers (higher priority)
+        # Add project servers (override global)
         if not global_only:
             project_config = self._get_project_config()
             if project_config:
                 project_servers = project_config.get("mcpServers", {})
                 for name, config in project_servers.items():
-                    master_servers[name] = {**config, "_source": "project", "_priority": 2}
+                    master_servers[name] = {**config, "_source": "project"}
 
         return master_servers
 
     def _get_project_config(self) -> dict[str, Any] | None:
         project_config_path = Path(".mcp.json")
-        if project_config_path.exists():
-            try:
-                with open(project_config_path) as f:
-                    return json.load(f)
-            except (OSError, json.JSONDecodeError):
-                return None
-        return None
+        return self._read_json_config(project_config_path) if project_config_path.exists() else None
 
     def _get_sync_locations(
         self, specific_location: str | None, global_only: bool, project_only: bool
@@ -105,16 +99,10 @@ class SyncEngine:
         location_path = Path(location["path"])
 
         # Read current config
-        current_config = {}
-        if location_path.exists():
-            try:
-                with open(location_path) as f:
-                    current_config = json.load(f)
-            except (OSError, json.JSONDecodeError) as e:
-                result.errors.append(
-                    {"location": location["path"], "error": f"Failed to read config: {str(e)}"}
-                )
-                return
+        current_config = self._read_json_config(location_path)
+        if current_config is None:
+            result.errors.append({"location": location["path"], "error": "Failed to read config"})
+            return
 
         # Extract current MCP servers
         current_servers = current_config.get("mcpServers", {})
@@ -123,32 +111,29 @@ class SyncEngine:
         new_servers = {}
         conflicts = []
 
-        # Keep existing servers that aren't in master list
+        # Keep existing servers that aren't in master list and log overrides
         for name, config in current_servers.items():
             if name not in master_servers:
                 new_servers[name] = config
             else:
-                # Check for conflicts
                 master_config = master_servers[name].copy()
                 master_config.pop("_source", None)
-                master_config.pop("_priority", None)
 
                 if config != master_config:
+                    # Log override (project configs always win)
                     conflicts.append(
                         {
                             "server": name,
                             "location": location["path"],
-                            "current": config,
-                            "master": master_config,
+                            "action": "overridden",
                             "source": master_servers[name]["_source"],
                         }
                     )
 
-        # Add master servers
+        # Add master servers (they always override existing)
         for name, config in master_servers.items():
             clean_config = config.copy()
             clean_config.pop("_source", None)
-            clean_config.pop("_priority", None)
             new_servers[name] = clean_config
 
         # Update config
@@ -162,8 +147,7 @@ class SyncEngine:
                 location_path.parent.mkdir(parents=True, exist_ok=True)
 
                 # Write new config
-                with open(location_path, "w") as f:
-                    json.dump(new_config, f, indent=2)
+                self._write_json_config(location_path, new_config)
 
             result.updated_locations.append(location["path"])
 
@@ -192,13 +176,11 @@ class SyncEngine:
         locations = self.config_manager.get_locations()
         for location in locations:
             location_path = Path(location["path"])
-            if location_path.exists():
-                try:
-                    with open(location_path) as f:
-                        config = json.load(f)
-                    status["location_servers"][location["name"]] = config.get("mcpServers", {})
-                except (OSError, json.JSONDecodeError):
-                    status["location_servers"][location["name"]] = "error"
+            config = self._read_json_config(location_path)
+            if config is not None:
+                status["location_servers"][location["name"]] = config.get("mcpServers", {})
+            else:
+                status["location_servers"][location["name"]] = "error"
 
         return status
 
@@ -222,15 +204,26 @@ class SyncEngine:
         """Add server to project config"""
         project_config_path = Path(".mcp.json")
 
-        if project_config_path.exists():
-            with open(project_config_path) as f:
-                project_config = json.load(f)
-        else:
+        project_config = self._read_json_config(project_config_path)
+        if project_config is None:
             project_config = {"mcpServers": {}}
 
         project_config["mcpServers"][name] = config
-
-        with open(project_config_path, "w") as f:
-            json.dump(project_config, f, indent=2)
-
+        self._write_json_config(project_config_path, project_config)
         return True
+
+    def _read_json_config(self, path: Path) -> dict[str, Any] | None:
+        """Read JSON config file, return None on error"""
+        if not path.exists():
+            return None
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    def _write_json_config(self, path: Path, config: dict[str, Any]):
+        """Write JSON config file"""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(config, f, indent=2)

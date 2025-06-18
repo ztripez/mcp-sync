@@ -243,72 +243,98 @@ def handle_sync(sync_engine, args):
 
 
 def handle_add_server(sync_engine, name):
-    print(f"Add server '{name}' to:")
-    print("1. Global config")
-    print("2. Project config")
-
     try:
-        choice = input("Choose (1 or 2): ").strip()
+        scope = _prompt_for_server_scope()
+        config = _prompt_for_server_config(name)
 
-        print(f"\nEnter server configuration for '{name}':")
-        command = input("Command: ").strip()
-        args_input = input("Args (comma-separated): ").strip()
-
-        config = {"command": command}
-        if args_input:
-            config["args"] = [arg.strip() for arg in args_input.split(",")]
-
-        env_input = input("Environment variables (KEY=value, comma-separated, optional): ").strip()
-        if env_input:
-            env_vars = {}
-            for pair in env_input.split(","):
-                if "=" in pair:
-                    key, value = pair.split("=", 1)
-                    env_vars[key.strip()] = value.strip()
-            if env_vars:
-                config["env"] = env_vars
-
-        if choice == "1":
+        if scope == "global":
             sync_engine.add_server_to_global(name, config)
             print(f"Added '{name}' to global config")
-        elif choice == "2":
+        else:
             sync_engine.add_server_to_project(name, config)
             print(f"Added '{name}' to project config")
-        else:
-            print("Invalid choice")
-
     except (KeyboardInterrupt, EOFError):
         print("\nCancelled")
 
 
-def handle_remove_server(sync_engine, name):
-    print(f"Remove server '{name}' from:")
+def _prompt_for_server_scope():
+    print("Add server to:")
     print("1. Global config")
     print("2. Project config")
 
-    try:
-        choice = input("Choose (1 or 2): ").strip()
+    choice = input("Choose (1 or 2): ").strip()
+    if choice == "1":
+        return "global"
+    elif choice == "2":
+        return "project"
+    else:
+        print("Invalid choice")
+        return _prompt_for_server_scope()
 
-        if choice == "1":
+
+def _prompt_for_server_config(name):
+    print(f"\nEnter server configuration for '{name}':")
+    command = input("Command: ").strip()
+
+    config = {"command": command}
+
+    args_input = input("Args (comma-separated): ").strip()
+    if args_input:
+        config["args"] = [arg.strip() for arg in args_input.split(",")]
+
+    env_vars = _prompt_for_env_vars()
+    if env_vars:
+        config["env"] = env_vars
+
+    return config
+
+
+def _prompt_for_env_vars():
+    env_input = input("Environment variables (KEY=value, comma-separated, optional): ").strip()
+    if not env_input:
+        return {}
+
+    env_vars = {}
+    for pair in env_input.split(","):
+        if "=" in pair:
+            key, value = pair.split("=", 1)
+            env_vars[key.strip()] = value.strip()
+    return env_vars
+
+
+def handle_remove_server(sync_engine, name):
+    try:
+        scope = _prompt_for_removal_scope(name)
+
+        if scope == "global":
             if sync_engine.remove_server_from_global(name):
                 print(f"Removed '{name}' from global config")
             else:
                 print(f"Server '{name}' not found in global config")
-        elif choice == "2":
-            print("Project server removal not implemented yet")
         else:
-            print("Invalid choice")
-
+            print("Project server removal not implemented yet")
     except (KeyboardInterrupt, EOFError):
         print("\nCancelled")
 
 
+def _prompt_for_removal_scope(name):
+    print(f"Remove server '{name}' from:")
+    print("1. Global config")
+    print("2. Project config")
+
+    choice = input("Choose (1 or 2): ").strip()
+    if choice == "1":
+        return "global"
+    elif choice == "2":
+        return "project"
+    else:
+        print("Invalid choice")
+        return _prompt_for_removal_scope(name)
+
+
 def handle_list_servers(sync_engine):
     status = sync_engine.get_server_status()
-
-    all_servers = set()
-    all_servers.update(status["global_servers"].keys())
-    all_servers.update(status["project_servers"].keys())
+    all_servers = _get_all_server_names(status)
 
     if not all_servers:
         print("No servers configured.")
@@ -316,25 +342,42 @@ def handle_list_servers(sync_engine):
 
     print("Configured servers:")
     for server_name in sorted(all_servers):
-        sources = []
-        if server_name in status["global_servers"]:
-            sources.append("global")
-        if server_name in status["project_servers"]:
-            sources.append("project")
+        sources = _get_server_sources(server_name, status)
+        _display_server_info(server_name, sources, status)
 
-        print(f"  {server_name} ({', '.join(sources)})")
 
-        # Show config from highest priority source
-        if server_name in status["project_servers"]:
-            config = status["project_servers"][server_name]
-        else:
-            config = status["global_servers"][server_name]
+def _get_all_server_names(status):
+    all_servers = set()
+    all_servers.update(status["global_servers"].keys())
+    all_servers.update(status["project_servers"].keys())
+    return all_servers
 
-        print(f"    Command: {config.get('command', 'unknown')}")
-        if config.get("args"):
-            print(f"    Args: {config['args']}")
-        if config.get("env"):
-            print(f"    Env: {config['env']}")
+
+def _get_server_sources(server_name, status):
+    sources = []
+    if server_name in status["global_servers"]:
+        sources.append("global")
+    if server_name in status["project_servers"]:
+        sources.append("project")
+    return sources
+
+
+def _display_server_info(server_name, sources, status):
+    print(f"  {server_name} ({', '.join(sources)})")
+
+    config = _get_effective_config(server_name, status)
+    print(f"    Command: {config.get('command', 'unknown')}")
+    if config.get("args"):
+        print(f"    Args: {config['args']}")
+    if config.get("env"):
+        print(f"    Env: {config['env']}")
+
+
+def _get_effective_config(server_name, status):
+    if server_name in status["project_servers"]:
+        return status["project_servers"][server_name]
+    else:
+        return status["global_servers"][server_name]
 
 
 def handle_init():
