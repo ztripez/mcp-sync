@@ -52,4 +52,4 @@ jobs:
         
     - name: Verify config file exists
       run: |
-        python -c "import os; print('✓ .mcp.json exists' if os.path.exists('.mcp.json') else '✗ .mcp.json missing')"
+        python -c "import os; print('.mcp.json exists' if os.path.exists('.mcp.json') else '.mcp.json missing')"
