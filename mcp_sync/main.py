@@ -121,7 +121,7 @@ def handle_scan(config_manager):
         location = config_info["location"]
         status = config_info["status"]
 
-        print(f"\n{location['name']} ({location['type']})")
+        print(f"\n{location['name']} ({location.get('type', 'Unknown')})")
         print(f"  Path: {location['path']}")
         print(f"  Status: {status}")
 
@@ -211,8 +211,11 @@ def handle_list_locations(config_manager):
 
     print("Registered config locations:")
     for location in locations:
-        print(f"  {location['name']} ({location['type']})")
-        print(f"    Path: {location['path']}")
+        name = location.get('name', 'Unnamed')
+        location_type = location.get('type', 'Unknown')
+        path = location.get('path', 'No path')
+        print(f"  {name} ({location_type})")
+        print(f"    Path: {path}")
 
 
 def handle_sync(sync_engine, args):
