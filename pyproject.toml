@@ -26,10 +26,10 @@ classifiers = [
 mcp-sync = "mcp_sync.main:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/mcp-sync"
-Repository = "https://github.com/yourusername/mcp-sync"
-Issues = "https://github.com/yourusername/mcp-sync/issues"
-Documentation = "https://github.com/yourusername/mcp-sync#readme"
+Homepage = "https://github.com/ztripez/mcp-sync"
+Repository = "https://github.com/ztripez/mcp-sync"
+Issues = "https://github.com/ztripez/mcp-sync/issues"
+Documentation = "https://github.com/ztripez/mcp-sync#readme"
 
 [tool.ruff]
 line-length = 100
