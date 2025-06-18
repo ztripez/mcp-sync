@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "ztripez", email = "ztripez@users.noreply.github.com"},
 ]
 license = {text = "MIT"}
 keywords = ["mcp", "model-context-protocol", "ai", "sync", "configuration"]
