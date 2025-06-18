@@ -1,0 +1,49 @@
+[project]
+name = "mcp-sync"
+version = "0.1.0"
+description = "Sync MCP (Model Context Protocol) configurations across AI tools"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+license = {text = "MIT"}
+keywords = ["mcp", "model-context-protocol", "ai", "sync", "configuration"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers", 
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+[project.scripts]
+mcp-sync = "mcp_sync.main:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/mcp-sync"
+Repository = "https://github.com/yourusername/mcp-sync"
+Issues = "https://github.com/yourusername/mcp-sync/issues"
+Documentation = "https://github.com/yourusername/mcp-sync#readme"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "PT"]
+ignore = ["S101"]  # Allow assert statements
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0",
+]
