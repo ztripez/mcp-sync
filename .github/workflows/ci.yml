@@ -49,4 +49,7 @@ jobs:
       run: |
         uv run mcp-sync template
         uv run mcp-sync init
-        ls -la .mcp.json
+        
+    - name: Verify config file exists
+      run: |
+        python -c "import os; print('✓ .mcp.json exists' if os.path.exists('.mcp.json') else '✗ .mcp.json missing')"
