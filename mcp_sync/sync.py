@@ -12,6 +12,13 @@ class SyncResult:
     dry_run: bool = False
 
 
+@dataclass
+class VacuumResult:
+    imported_servers: dict[str, str]  # server_name -> source_location
+    conflicts: list[dict[str, Any]]  # resolved conflicts
+    errors: list[dict[str, str]]
+
+
 class SyncEngine:
     def __init__(self, config_manager):
         self.config_manager = config_manager
@@ -227,3 +234,89 @@ class SyncEngine:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(config, f, indent=2)
+
+    def vacuum_configs(self) -> "VacuumResult":
+        """Import existing MCP configs from all discovered locations"""
+        result = VacuumResult(imported_servers={}, conflicts=[], errors=[])
+
+        # Get all locations (excluding project .mcp.json files)
+        locations = self.config_manager.get_locations()
+        discovered_servers = {}  # server_name -> {config, source_name}
+
+        # Scan all locations for existing servers
+        for location in locations:
+            location_path = Path(location["path"])
+            if location_path.name == ".mcp.json":
+                continue  # Skip project files
+
+            config = self._read_json_config(location_path)
+            if config is None:
+                continue
+
+            mcp_servers = config.get("mcpServers", {})
+            for server_name, server_config in mcp_servers.items():
+                if server_name in discovered_servers:
+                    # Conflict found - need to resolve
+                    existing = discovered_servers[server_name]
+                    choice = self._resolve_conflict(
+                        server_name,
+                        existing["config"],
+                        existing["source"],
+                        server_config,
+                        location["name"],
+                    )
+
+                    if choice == "new":
+                        discovered_servers[server_name] = {
+                            "config": server_config,
+                            "source": location["name"],
+                        }
+                        result.conflicts.append(
+                            {
+                                "server": server_name,
+                                "chosen_source": location["name"],
+                                "rejected_source": existing["source"],
+                            }
+                        )
+                    else:
+                        result.conflicts.append(
+                            {
+                                "server": server_name,
+                                "chosen_source": existing["source"],
+                                "rejected_source": location["name"],
+                            }
+                        )
+                else:
+                    discovered_servers[server_name] = {
+                        "config": server_config,
+                        "source": location["name"],
+                    }
+
+        # Import all discovered servers to global config
+        if discovered_servers:
+            global_config = self.config_manager.get_global_config()
+
+            for server_name, server_info in discovered_servers.items():
+                global_config["mcpServers"][server_name] = server_info["config"]
+                result.imported_servers[server_name] = server_info["source"]
+
+            self.config_manager._save_global_config(global_config)
+
+        return result
+
+    def _resolve_conflict(
+        self, server_name: str, config1: dict, source1: str, config2: dict, source2: str
+    ) -> str:
+        """Interactively resolve server config conflicts"""
+        print(f"\nFound '{server_name}' server in multiple locations:")
+        print(f"1. {source1}: {config1}")
+        print(f"2. {source2}: {config2}")
+
+        while True:
+            choice = input("Choose which to keep (1 or 2): ").strip()
+            if choice == "1":
+                return "existing"
+            elif choice == "2":
+                return "new"
+            else:
+                print("Invalid choice. Please enter 1 or 2.")

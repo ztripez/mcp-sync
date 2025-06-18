@@ -54,6 +54,11 @@ def create_parser():
 
     subparsers.add_parser("list-servers", help="Show all managed servers")
 
+    # Migration
+    subparsers.add_parser(
+        "vacuum", help="Import existing MCP configs from all discovered locations"
+    )
+
     # Project management
     subparsers.add_parser("init", help="Create project .mcp.json")
     subparsers.add_parser("template", help="Show template config")
@@ -93,6 +98,8 @@ def main():
             handle_remove_server(sync_engine, args.name)
         case "list-servers":
             handle_list_servers(sync_engine)
+        case "vacuum":
+            handle_vacuum(sync_engine)
         case "init":
             handle_init()
         case "template":
@@ -392,6 +399,33 @@ def handle_init():
         json.dump(project_config, f, indent=2)
 
     print("Created .mcp.json in current directory")
+
+
+def handle_vacuum(sync_engine):
+    """Import existing MCP configs from all discovered locations"""
+    try:
+        result = sync_engine.vacuum_configs()
+
+        if not result.imported_servers and not result.conflicts:
+            print("No MCP servers found in any discovered locations.")
+            return
+
+        # Show imported servers
+        if result.imported_servers:
+            print(f"Successfully imported {len(result.imported_servers)} servers:")
+            for server_name, source in result.imported_servers.items():
+                print(f"  {server_name} (from {source})")
+
+        # Show conflicts that were resolved
+        if result.conflicts:
+            print(f"\nResolved {len(result.conflicts)} conflicts:")
+            for conflict in result.conflicts:
+                print(f"  {conflict['server']} - kept version from {conflict['chosen_source']}")
+
+        print("\nVacuum complete! Run 'mcp-sync sync' to standardize all configs.")
+
+    except (KeyboardInterrupt, EOFError):
+        print("\nVacuum cancelled")
 
 
 def handle_template():
