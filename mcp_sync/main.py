@@ -211,9 +211,9 @@ def handle_list_locations(config_manager):
 
     print("Registered config locations:")
     for location in locations:
-        name = location.get('name', 'Unnamed')
-        location_type = location.get('type', 'Unknown')
-        path = location.get('path', 'No path')
+        name = location.get("name", "Unnamed")
+        location_type = location.get("type", "Unknown")
+        path = location.get("path", "No path")
         print(f"  {name} ({location_type})")
         print(f"    Path: {path}")
 
