@@ -11,13 +11,13 @@ from typing import Any
 
 class ConfigManager:
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.config_dir = Path.home() / ".mcp-sync"
         self.locations_file = self.config_dir / "locations.json"
         self.global_config_file = self.config_dir / "global.json"
         self.user_client_definitions_file = self.config_dir / "client_definitions.json"
         self.client_definitions = self._load_client_definitions()
         self._ensure_config_dir()
-        self.logger = logging.getLogger(__name__)
 
     def _ensure_config_dir(self):
         self.config_dir.mkdir(exist_ok=True)
