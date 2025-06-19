@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .clients.executor import CLIExecutor
+
 
 @dataclass
 class SyncResult:
@@ -29,8 +31,9 @@ class VacuumResult:
 
 
 class SyncEngine:
-    def __init__(self, config_manager):
-        self.config_manager = config_manager
+    def __init__(self, settings):
+        self.settings = settings
+        self.executor = CLIExecutor()
         self.logger = logging.getLogger(__name__)
 
     def sync_all(
@@ -82,10 +85,10 @@ class SyncEngine:
 
         # Add global servers
         if not project_only:
-            global_config = self.config_manager.get_global_config()
-            global_servers = global_config.get("mcpServers", {})
+            global_config = self.settings.get_global_config()
+            global_servers = global_config.mcpServers
             for name, config in global_servers.items():
-                master_servers[name] = {**config, "_source": "global"}
+                master_servers[name] = {**config.model_dump(), "_source": "global"}
 
         # Add project servers (override global)
         if not global_only:
@@ -104,7 +107,8 @@ class SyncEngine:
     def _get_sync_locations(
         self, specific_location: str | None, global_only: bool, project_only: bool
     ) -> list[dict[str, str]]:
-        all_locations = self.config_manager.get_locations()
+        locations_config = self.settings.get_locations_config()
+        all_locations = [loc.model_dump() for loc in locations_config.locations]
 
         if specific_location:
             # Find specific location by path or name
@@ -207,7 +211,13 @@ class SyncEngine:
         )
 
         # Get current servers from CLI
-        current_servers = self.config_manager.get_cli_mcp_servers(client_id) or {}
+        client_definitions = self.settings.get_client_definitions()
+        client_config = client_definitions.clients.get(client_id)
+        if not client_config:
+            self.logger.warning(f"Client {client_id} not found in definitions")
+            return
+
+        current_servers = self.executor.get_mcp_servers(client_id, client_config) or {}
         self.logger.debug(f"CLI current servers for {client_id}: {list(current_servers.keys())}")
 
         # Build new server list - only include servers from master list
@@ -254,12 +264,10 @@ class SyncEngine:
 
         # Filter out URL-based servers from comparison since CLI doesn't support them yet
         current_command_servers = {
-            name: config for name, config in current_servers.items()
-            if not config.get("url")
+            name: config for name, config in current_servers.items() if not config.get("url")
         }
         new_command_servers = {
-            name: config for name, config in new_servers.items()
-            if not config.get("url")
+            name: config for name, config in new_servers.items() if not config.get("url")
         }
 
         # Check if changes are needed (only for command-based servers)
@@ -296,7 +304,7 @@ class SyncEngine:
                 # Remove servers that are no longer needed
                 servers_to_remove = [name for name in current_servers if name not in new_servers]
                 for name in servers_to_remove:
-                    self.config_manager.remove_cli_mcp_server(client_id, name)
+                    self.executor.remove_mcp_server(client_id, client_config, name)
 
                 # Add/update servers
                 for name, config in new_servers.items():
@@ -328,8 +336,8 @@ class SyncEngine:
                             f"full_command={full_command}"
                         )
                         if full_command:
-                            self.config_manager.add_cli_mcp_server(
-                                client_id, name, full_command, env_vars
+                            self.executor.add_mcp_server(
+                                client_id, client_config, name, full_command, env_vars
                             )
                         else:
                             self.logger.warning(f"Skipping server {name} - no valid command")
@@ -350,8 +358,8 @@ class SyncEngine:
         }
 
         # Global servers
-        global_config = self.config_manager.get_global_config()
-        status["global_servers"] = global_config.get("mcpServers", {})
+        global_config = self.settings.get_global_config()
+        status["global_servers"] = {name: config.model_dump() for name, config in global_config.mcpServers.items()}
 
         # Project servers
         project_config = self._get_project_config()
@@ -359,7 +367,8 @@ class SyncEngine:
             status["project_servers"] = project_config.get("mcpServers", {})
 
         # Location servers
-        locations = self.config_manager.get_locations()
+        locations_config = self.settings.get_locations_config()
+        locations = [loc.model_dump() for loc in locations_config.locations]
         for location in locations:
             # Handle CLI clients differently from file-based clients
             if location.get("config_type") == "cli" or location["path"].startswith("cli:"):
@@ -368,7 +377,12 @@ class SyncEngine:
                     if location["path"].startswith("cli:")
                     else location["name"]
                 )
-                cli_servers = self.config_manager.get_cli_mcp_servers(client_id)
+                client_definitions = self.settings.get_client_definitions()
+                client_config = client_definitions.clients.get(client_id)
+                if client_config:
+                    cli_servers = self.executor.get_mcp_servers(client_id, client_config)
+                else:
+                    cli_servers = None
                 if cli_servers is not None:
                     status["location_servers"][location["name"]] = cli_servers
                 else:
@@ -386,17 +400,20 @@ class SyncEngine:
 
     def add_server_to_global(self, name: str, config: dict[str, Any]) -> bool:
         """Add server to global config"""
-        global_config = self.config_manager.get_global_config()
-        global_config["mcpServers"][name] = config
-        self.config_manager._save_global_config(global_config)
+        from .config.models import MCPServerConfig
+
+        global_config = self.settings.get_global_config()
+        server_config = MCPServerConfig(**config)
+        global_config.mcpServers[name] = server_config
+        self.settings._save_global_config(global_config)
         return True
 
     def remove_server_from_global(self, name: str) -> bool:
         """Remove server from global config"""
-        global_config = self.config_manager.get_global_config()
-        if name in global_config.get("mcpServers", {}):
-            del global_config["mcpServers"][name]
-            self.config_manager._save_global_config(global_config)
+        global_config = self.settings.get_global_config()
+        if name in global_config.mcpServers:
+            del global_config.mcpServers[name]
+            self.settings._save_global_config(global_config)
             return True
         return False
 
@@ -434,9 +451,20 @@ class SyncEngine:
         """Import existing MCP configs from all discovered locations"""
         result = VacuumResult(imported_servers={}, conflicts=[], errors=[], skipped_servers=[])
 
-        # Get all locations (excluding project .mcp.json files)
-        locations = self.config_manager.get_locations()
-        discovered_servers = {}  # server_name -> {config, source_name}
+        # First, auto-discover clients and add them as locations
+        from .clients.repository import ClientRepository
+        repository = ClientRepository()
+        discovered_clients = repository.discover_clients()
+        
+        # Add discovered clients as locations if they're not already registered
+        for client in discovered_clients:
+            if not self.settings.add_location(client["path"], client["client_name"]):
+                self.logger.debug(f"Location {client['path']} already exists")
+
+        # Get all locations (including newly discovered ones)
+        locations_config = self.settings.get_locations_config()
+        locations = [loc.model_dump() for loc in locations_config.locations]
+        discovered_servers: dict[str, dict[str, Any]] = {}  # server_name -> {config, source_name}
 
         # Scan all locations for existing servers
         for location in locations:
@@ -447,7 +475,12 @@ class SyncEngine:
                     if location["path"].startswith("cli:")
                     else location["name"]
                 )
-                cli_servers = self.config_manager.get_cli_mcp_servers(client_id)
+                client_definitions = self.settings.get_client_definitions()
+                client_config = client_definitions.clients.get(client_id)
+                if client_config:
+                    cli_servers = self.executor.get_mcp_servers(client_id, client_config)
+                else:
+                    cli_servers = None
 
                 if cli_servers:
                     for server_name, server_config in cli_servers.items():
@@ -549,16 +582,35 @@ class SyncEngine:
 
         # Import all discovered servers to global config
         if discovered_servers:
-            global_config = self.config_manager.get_global_config()
+            from .config.models import MCPServerConfig
+
+            global_config = self.settings.get_global_config()
 
             for server_name, server_info in discovered_servers.items():
-                if skip_existing and server_name in global_config.get("mcpServers", {}):
+                if skip_existing and server_name in global_config.mcpServers:
                     result.skipped_servers.append(server_name)
                     continue
-                global_config["mcpServers"][server_name] = server_info["config"]
-                result.imported_servers[server_name] = server_info["source"]
+                
+                # Skip URL-based servers as they're not supported by MCPServerConfig
+                config_data = server_info["config"].copy()
+                if "url" in config_data and "command" not in config_data:
+                    self.logger.info(f"Skipping URL-based server {server_name} - not supported by current config model")
+                    result.skipped_servers.append(server_name)
+                    continue
+                
+                # Normalize command format for MCPServerConfig validation
+                if "command" in config_data and isinstance(config_data["command"], str):
+                    config_data["command"] = [config_data["command"]]
+                
+                try:
+                    server_config = MCPServerConfig(**config_data)
+                    global_config.mcpServers[server_name] = server_config
+                    result.imported_servers[server_name] = server_info["source"]
+                except Exception as e:
+                    self.logger.warning(f"Failed to import server {server_name}: {e}")
+                    result.errors.append({"location": server_info["source"], "error": f"Failed to import {server_name}: {str(e)}"})
 
-            self.config_manager._save_global_config(global_config)
+            self.settings._save_global_config(global_config)
 
         return result
 

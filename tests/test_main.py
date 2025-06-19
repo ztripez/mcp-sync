@@ -32,7 +32,7 @@ def test_build_server_config_from_args():
     args = argparse.Namespace(server_cmd="python", args="a,b", env="A=1,B=2", scope=None)
     config = main._build_server_config_from_args(args)
     assert config == {
-        "command": "python",
+        "command": ["python"],
         "args": ["a", "b"],
         "env": {"A": "1", "B": "2"},
     }
