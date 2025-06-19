@@ -107,8 +107,13 @@ def test_default_locations_discovery():
         assert location["type"] == "auto"
         assert "client_name" in location
 
-        # Path should exist (since it was discovered)
-        assert Path(location["path"]).exists()
+        # Path should exist (since it was discovered) or be a CLI client
+        if location.get("config_type") == "cli":
+            # CLI clients use special "cli:" prefix format
+            assert location["path"].startswith("cli:")
+        else:
+            # File-based clients should have existing paths
+            assert Path(location["path"]).exists()
 
 
 def test_client_definitions_error_handling():

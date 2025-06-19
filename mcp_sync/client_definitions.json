@@ -14,13 +14,18 @@
     "claude-code": {
       "name": "Claude Code",
       "description": "Claude CLI for code editing",
-      "paths": {
+      "config_type": "cli",
+      "cli_commands": {
+        "list_mcp": "claude mcp list",
+        "get_mcp": "claude mcp get {name}",
+        "add_mcp": "claude mcp add {name} {env_flags} --scope {scope} --transport {transport} {command_args}",
+        "remove_mcp": "claude mcp remove --scope {scope} {name}"
+      },
+      "fallback_paths": {
         "darwin": "~/.claude/settings.json",
         "windows": "~/.claude/settings.json",
         "linux": "~/.claude/settings.json"
-      },
-      "config_format": "json",
-      "mcp_key": "mcpServers"
+      }
     },
     "cline": {
       "name": "Cline",

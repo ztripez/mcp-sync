@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ class VacuumResult:
 class SyncEngine:
     def __init__(self, config_manager):
         self.config_manager = config_manager
+        self.logger = logging.getLogger(__name__)
 
     def sync_all(
         self,
@@ -30,22 +32,42 @@ class SyncEngine:
         project_only: bool = False,
         specific_location: str | None = None,
     ) -> SyncResult:
+        self.logger.info(
+            f"Starting sync operation (dry_run={dry_run}, "
+            f"global_only={global_only}, project_only={project_only})"
+        )
         result = SyncResult([], [], [], dry_run)
 
-        # Get master server list from global config + project config
-        master_servers = self._build_master_server_list(global_only, project_only)
+        try:
+            # Get master server list from global config + project config
+            master_servers = self._build_master_server_list(global_only, project_only)
+            self.logger.debug(f"Built master server list with {len(master_servers)} servers")
 
-        # Get locations to sync
-        locations = self._get_sync_locations(specific_location, global_only, project_only)
+            # Get locations to sync
+            locations = self._get_sync_locations(specific_location, global_only, project_only)
+            self.logger.info(f"Found {len(locations)} locations to sync")
 
-        # Sync each location
-        for location in locations:
-            try:
-                self._sync_location(location, master_servers, result)
-            except Exception as e:
-                result.errors.append({"location": location["path"], "error": str(e)})
+            # Sync each location
+            for location in locations:
+                try:
+                    self.logger.debug(f"Syncing location: {location['path']}")
+                    self._sync_location(location, master_servers, result)
+                except Exception as e:
+                    self.logger.error(f"Failed to sync location {location['path']}: {e}")
+                    result.errors.append({"location": location["path"], "error": str(e)})
 
-        return result
+            self.logger.info(
+                f"Sync completed: {len(result.updated_locations)} updated, "
+                f"{len(result.conflicts)} conflicts, {len(result.errors)} errors"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Critical error during sync operation: {e}")
+            result.errors.append(
+                {"location": "sync_engine", "error": f"Critical sync error: {str(e)}"}
+            )
+            return result
 
     def _build_master_server_list(self, global_only: bool, project_only: bool) -> dict[str, Any]:
         master_servers = {}
@@ -103,6 +125,11 @@ class SyncEngine:
     def _sync_location(
         self, location: dict[str, str], master_servers: dict[str, Any], result: SyncResult
     ):
+        # Handle CLI-based clients
+        if location.get("config_type") == "cli":
+            self._sync_cli_location(location, master_servers, result)
+            return
+
         location_path = Path(location["path"])
 
         # Read current config
@@ -155,6 +182,90 @@ class SyncEngine:
 
                 # Write new config
                 self._write_json_config(location_path, new_config)
+
+            result.updated_locations.append(location["path"])
+
+        # Add conflicts to result
+        result.conflicts.extend(conflicts)
+
+    def _sync_cli_location(
+        self, location: dict[str, str], master_servers: dict[str, Any], result: SyncResult
+    ):
+        """Sync CLI-based client location"""
+        client_id = location["name"]
+
+        # Get current servers from CLI
+        current_servers = self.config_manager.get_cli_mcp_servers(client_id) or {}
+
+        # Build new server list - only include servers from master list
+        new_servers = {}
+        conflicts = []
+
+        # Check for conflicts where existing servers differ from master
+        for name, config in current_servers.items():
+            if name in master_servers:
+                master_config = master_servers[name].copy()
+                master_config.pop("_source", None)
+
+                # For CLI, we need to compare command arrays
+                current_cmd = config.get("command", [])
+                master_cmd = master_config.get("command", [])
+
+                if current_cmd != master_cmd:
+                    conflicts.append(
+                        {
+                            "server": name,
+                            "location": location["path"],
+                            "action": "overridden",
+                            "source": master_servers[name]["_source"],
+                        }
+                    )
+
+        # Add all master servers (this is the new configuration)
+        for name, config in master_servers.items():
+            clean_config = config.copy()
+            clean_config.pop("_source", None)
+            new_servers[name] = clean_config
+
+        # Check if changes are needed
+        changes_needed = set(current_servers.keys()) != set(new_servers.keys())
+        if not changes_needed:
+            for name in new_servers:
+                if name in current_servers:
+                    current_cmd = current_servers[name].get("command", [])
+                    new_cmd = new_servers[name].get("command", [])
+                    if current_cmd != new_cmd:
+                        changes_needed = True
+                        break
+                else:
+                    changes_needed = True
+                    break
+
+        if changes_needed and not result.dry_run:
+            # Remove servers that are no longer needed
+            servers_to_remove = [name for name in current_servers if name not in new_servers]
+            for name in servers_to_remove:
+                self.config_manager.remove_cli_mcp_server(client_id, name)
+
+            # Add/update servers
+            for name, config in new_servers.items():
+                if name not in current_servers or current_servers[name] != config:
+                    command = config.get("command", [])
+                    args = config.get("args", [])
+                    env_vars = config.get("env", {})
+
+                    # Build full command array - combine command and args
+                    if isinstance(command, str):
+                        full_command = [command] + args
+                    elif isinstance(command, list):
+                        full_command = command + args
+                    else:
+                        full_command = []
+
+                    if full_command:
+                        self.config_manager.add_cli_mcp_server(
+                            client_id, name, full_command, env_vars
+                        )
 
             result.updated_locations.append(location["path"])
 
@@ -245,6 +356,52 @@ class SyncEngine:
 
         # Scan all locations for existing servers
         for location in locations:
+            if location.get("config_type") == "cli":
+                # Handle CLI-based clients
+                client_id = location["name"]
+                cli_servers = self.config_manager.get_cli_mcp_servers(client_id)
+
+                if cli_servers:
+                    for server_name, server_config in cli_servers.items():
+                        if server_name in discovered_servers:
+                            # Conflict found - need to resolve
+                            existing = discovered_servers[server_name]
+                            choice = self._resolve_conflict(
+                                server_name,
+                                existing["config"],
+                                existing["source"],
+                                server_config,
+                                location["name"],
+                            )
+
+                            if choice == "new":
+                                discovered_servers[server_name] = {
+                                    "config": server_config,
+                                    "source": location["name"],
+                                }
+                                result.conflicts.append(
+                                    {
+                                        "server": server_name,
+                                        "chosen_source": location["name"],
+                                        "rejected_source": existing["source"],
+                                    }
+                                )
+                            else:
+                                result.conflicts.append(
+                                    {
+                                        "server": server_name,
+                                        "chosen_source": existing["source"],
+                                        "rejected_source": location["name"],
+                                    }
+                                )
+                        else:
+                            discovered_servers[server_name] = {
+                                "config": server_config,
+                                "source": location["name"],
+                            }
+                continue
+
+            # Handle file-based clients
             location_path = Path(location["path"])
             if location_path.name == ".mcp.json":
                 continue  # Skip project files
