@@ -33,7 +33,7 @@ mcp-sync status
 ```bash
 git clone <repo-url>
 cd mcp-sync
-uv pip install -e .
+./scripts/setup.sh    # Installs dependencies and git hooks automatically
 ```
 
 ## Quick Start
@@ -133,7 +133,7 @@ mcp-sync add-server database
 
 # 3. Add global development server
 mcp-sync add-server filesystem
-# Choose "1. Global config"  
+# Choose "1. Global config"
 # Command: npx
 # Args: -y, @modelcontextprotocol/server-filesystem, /home/user
 
@@ -154,7 +154,7 @@ mcp-sync status
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-filesystem", 
+        "@modelcontextprotocol/server-filesystem",
         "/path/to/directory"
       ]
     },
