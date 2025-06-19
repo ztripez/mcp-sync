@@ -190,7 +190,7 @@ class ConfigManager:
                 return False
 
             # Use subprocess with list of arguments (safer than shell=True)
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 # Validated command with safe arguments
                 [base_cmd, "--version"],
                 capture_output=True,
                 text=True,
@@ -314,7 +314,7 @@ class ConfigManager:
                 self.logger.warning(f"Invalid command name in list_mcp: {command_parts[0]}")
                 return None
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 # Validated command with safe arguments
                 command_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -426,7 +426,7 @@ class ConfigManager:
             # Remove any empty parts
             cmd_parts = [part for part in cmd_parts if part and part.strip()]
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 # Validated command with safe arguments
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -491,7 +491,7 @@ class ConfigManager:
                 else:
                     cmd_parts.append(part)
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 # Validated command with safe arguments
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -542,7 +542,7 @@ class ConfigManager:
                 else:
                     cmd_parts.append(part)
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 # Validated command with safe arguments
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 

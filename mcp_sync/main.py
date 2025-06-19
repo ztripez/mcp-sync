@@ -690,7 +690,7 @@ def handle_edit_client_definitions(config_manager):
 
     try:
         # Use subprocess.run with explicit arguments list (safer than shell=True)
-        subprocess.run(
+        subprocess.run(  # noqa: S603 # Validated editor and file path with safe arguments
             [editor, str(validated_path)],
             check=True,
             timeout=300,  # 5 minute timeout for editing
