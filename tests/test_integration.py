@@ -63,7 +63,11 @@ def test_full_client_management_workflow():
         custom_client_existing = MCPClientConfig(
             name="Test IDE",
             description="A test IDE for development",
-            paths={"linux": str(test_config_path)},
+            paths={
+                "linux": str(test_config_path),
+                "darwin": str(test_config_path),
+                "windows": str(test_config_path),
+            },
             config_type="file",
         )
 
