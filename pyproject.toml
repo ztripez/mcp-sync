@@ -1,6 +1,6 @@
 [project]
 name = "mcp-sync"
-version = "0.3.2"
+version = "0.3.3"
 description = "Sync MCP (Model Context Protocol) configurations across AI tools"
 readme = "README.md"
 requires-python = ">=3.12"
