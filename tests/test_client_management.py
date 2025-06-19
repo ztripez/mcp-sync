@@ -68,7 +68,9 @@ def test_get_client_location_existing_path(tmp_path):
     test_file = tmp_path / "test_config.json"
     test_file.write_text("{}")
 
-    client_config = {"name": "Test Client", "paths": {"linux": str(test_file)}}
+    # Use the current platform for the test
+    current_platform = cm._get_platform_name()
+    client_config = {"name": "Test Client", "paths": {current_platform: str(test_file)}}
 
     location = cm._get_client_location("test-client", client_config)
 
@@ -83,7 +85,8 @@ def test_get_client_location_missing_path():
     """Test client location detection when path doesn't exist"""
     cm = ConfigManager()
 
-    client_config = {"name": "Test Client", "paths": {"linux": "/nonexistent/path.json"}}
+    current_platform = cm._get_platform_name()
+    client_config = {"name": "Test Client", "paths": {current_platform: "/nonexistent/path.json"}}
 
     location = cm._get_client_location("test-client", client_config)
     assert location is None

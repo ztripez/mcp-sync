@@ -59,7 +59,8 @@ def test_full_client_management_workflow():
         test_config_path.write_text('{"mcpServers": {}}')
 
         custom_client_existing = custom_client.copy()
-        custom_client_existing["paths"]["linux"] = str(test_config_path)
+        current_platform = cm._get_platform_name()
+        custom_client_existing["paths"][current_platform] = str(test_config_path)
 
         location = cm._get_client_location("test-ide", custom_client_existing)
         assert location is not None
