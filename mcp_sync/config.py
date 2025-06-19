@@ -37,12 +37,12 @@ class ConfigManager:
         # Claude Desktop
         claude_path = self._get_platform_config_path("Claude", "claude_desktop_config.json")
         if claude_path.exists():
-            locations.append({"path": str(claude_path), "name": "claude-desktop"})
+            locations.append({"path": str(claude_path), "name": "claude-desktop", "type": "auto"})
 
         # Claude Code
         claude_code_path = Path.home() / ".claude/settings.json"
         if claude_code_path.exists():
-            locations.append({"path": str(claude_code_path), "name": "claude-code"})
+            locations.append({"path": str(claude_code_path), "name": "claude-code", "type": "auto"})
 
         return locations
 
@@ -51,13 +51,13 @@ class ConfigManager:
             "Code", "User/globalStorage/cline_mcp_settings.json"
         )
         if cline_path.exists():
-            return [{"path": str(cline_path), "name": "cline"}]
+            return [{"path": str(cline_path), "name": "cline", "type": "auto"}]
         return []
 
     def _get_vscode_locations(self) -> list[dict[str, str]]:
         vscode_path = self._get_platform_config_path("Code", "User/settings.json")
         if vscode_path.exists():
-            return [{"path": str(vscode_path), "name": "vscode-user"}]
+            return [{"path": str(vscode_path), "name": "vscode-user", "type": "auto"}]
         return []
 
     def _get_platform_config_path(self, app_name: str, subpath: str) -> Path:
