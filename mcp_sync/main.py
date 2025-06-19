@@ -364,7 +364,11 @@ def _build_server_config_from_args(args):
     config = {"command": args.server_cmd}
 
     if args.args:
-        config["args"] = [arg.strip() for arg in args.args.split(",")]
+        # Split by comma if comma exists, otherwise split by spaces
+        if "," in args.args:
+            config["args"] = [arg.strip() for arg in args.args.split(",")]
+        else:
+            config["args"] = args.args.split()
 
     if args.env:
         env_vars = {}

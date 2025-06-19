@@ -417,9 +417,9 @@ class ConfigManager:
                 elif "{args}" in part:
                     cmd_parts.extend(command[1:])  # Add args as separate elements
                 elif "{command_args}" in part:
-                    # Combine command parts into a single quoted string for Claude CLI
-                    command_str = shlex.join(command)
-                    cmd_parts.append(command_str)
+                    # Add -- separator and command for Claude CLI
+                    cmd_parts.append("--")
+                    cmd_parts.extend(command)
                 else:
                     cmd_parts.append(part)
 
