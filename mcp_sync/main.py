@@ -197,10 +197,10 @@ def main():
 
 def handle_scan(repository):
     print("Scanning for MCP configurations...")
-    
+
     # First, discover available clients
     discovered_clients = repository.discover_clients()
-    
+
     if discovered_clients:
         print("\nDiscovered MCP clients:")
         for client in discovered_clients:
@@ -209,10 +209,10 @@ def handle_scan(repository):
             print(f"  Config type: {client['config_type']}")
             if client.get('description'):
                 print(f"  Description: {client['description']}")
-    
+
     # Then, scan registered locations
     configs = repository.scan_configs()
-    
+
     if configs:
         print("\nRegistered config locations:")
         for config_info in configs:
@@ -229,7 +229,7 @@ def handle_scan(repository):
                     print(f"  Servers: {', '.join(mcp_servers.keys())}")
                 else:
                     print("  Servers: none")
-    
+
     if not discovered_clients and not configs:
         print("No MCP clients or config locations found.")
 

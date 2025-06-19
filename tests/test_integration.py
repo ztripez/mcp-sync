@@ -3,8 +3,8 @@
 import tempfile
 from pathlib import Path
 
-from mcp_sync.config.settings import Settings
 from mcp_sync.config.models import ClientDefinitions, MCPClientConfig
+from mcp_sync.config.settings import Settings
 
 
 def test_full_client_management_workflow():

@@ -359,7 +359,9 @@ class SyncEngine:
 
         # Global servers
         global_config = self.settings.get_global_config()
-        status["global_servers"] = {name: config.model_dump() for name, config in global_config.mcpServers.items()}
+        status["global_servers"] = {
+            name: config.model_dump() for name, config in global_config.mcpServers.items()
+        }
 
         # Project servers
         project_config = self._get_project_config()
@@ -455,7 +457,7 @@ class SyncEngine:
         from .clients.repository import ClientRepository
         repository = ClientRepository()
         discovered_clients = repository.discover_clients()
-        
+
         # Add discovered clients as locations if they're not already registered
         for client in discovered_clients:
             if not self.settings.add_location(client["path"], client["client_name"]):
@@ -590,25 +592,31 @@ class SyncEngine:
                 if skip_existing and server_name in global_config.mcpServers:
                     result.skipped_servers.append(server_name)
                     continue
-                
+
                 # Skip URL-based servers as they're not supported by MCPServerConfig
                 config_data = server_info["config"].copy()
                 if "url" in config_data and "command" not in config_data:
-                    self.logger.info(f"Skipping URL-based server {server_name} - not supported by current config model")
+                    self.logger.info(
+                        f"Skipping URL-based server {server_name} - "
+                        "not supported by current config model"
+                    )
                     result.skipped_servers.append(server_name)
                     continue
-                
+
                 # Normalize command format for MCPServerConfig validation
                 if "command" in config_data and isinstance(config_data["command"], str):
                     config_data["command"] = [config_data["command"]]
-                
+
                 try:
                     server_config = MCPServerConfig(**config_data)
                     global_config.mcpServers[server_name] = server_config
                     result.imported_servers[server_name] = server_info["source"]
                 except Exception as e:
                     self.logger.warning(f"Failed to import server {server_name}: {e}")
-                    result.errors.append({"location": server_info["source"], "error": f"Failed to import {server_name}: {str(e)}"})
+                    result.errors.append({
+                        "location": server_info["source"],
+                        "error": f"Failed to import {server_name}: {str(e)}"
+                    })
 
             self.settings._save_global_config(global_config)
 

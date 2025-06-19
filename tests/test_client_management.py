@@ -223,11 +223,17 @@ def test_add_cli_mcp_server(mock_run):
     client_config = MCPClientConfig(
         name="Claude Code",
         config_type="cli",
-        cli_commands={"add_mcp": "claude mcp add {name} -e {env_flags} --scope {scope} --transport {transport} {command_args}"}
+        cli_commands={
+            "add_mcp": (
+                "claude mcp add {name} -e {env_flags} --scope {scope} "
+                "--transport {transport} {command_args}"
+            )
+        }
     )
 
     success = executor.add_mcp_server(
-        "claude-code", client_config, "test-server", ["echo", "test"], env_vars={"KEY": "value"}, scope="user"
+        "claude-code", client_config, "test-server", ["echo", "test"],
+        env_vars={"KEY": "value"}, scope="user"
     )
 
     assert success

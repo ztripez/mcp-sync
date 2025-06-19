@@ -63,7 +63,7 @@ class CLIExecutor:
                 self.logger.warning(f"Invalid command name: {base_cmd}")
                 return False
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 [base_cmd, "--version"],
                 capture_output=True,
                 text=True,
@@ -108,7 +108,7 @@ class CLIExecutor:
                 self.logger.warning(f"Invalid command name in list_mcp: {command_parts[0]}")
                 return None
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 command_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -210,7 +210,7 @@ class CLIExecutor:
 
             cmd_parts = [part for part in cmd_parts if part and part.strip()]
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -271,7 +271,7 @@ class CLIExecutor:
                 else:
                     cmd_parts.append(part)
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 
@@ -319,7 +319,7 @@ class CLIExecutor:
                 else:
                     cmd_parts.append(part)
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 cmd_parts, capture_output=True, text=True, timeout=10, check=False
             )
 

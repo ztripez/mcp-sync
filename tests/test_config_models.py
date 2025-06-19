@@ -135,7 +135,10 @@ class TestMCPClientConfig:
         assert config.name == "Test Client"
         assert config.description == "A test client"
         assert config.config_type == "file"
-        assert config.paths == {"linux": "~/.config/test/config.json", "darwin": "~/Library/test/config.json"}
+        assert config.paths == {
+            "linux": "~/.config/test/config.json",
+            "darwin": "~/Library/test/config.json"
+        }
         assert config.fallback_paths == {"linux": "~/.test/config.json"}
         assert config.cli_commands == {"list_mcp": "test mcp list"}
 

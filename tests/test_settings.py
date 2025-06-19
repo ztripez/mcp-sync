@@ -122,7 +122,9 @@ class TestSettingsInitialization:
             assert settings.config_dir == temp_config_dir
             assert settings.locations_file == temp_config_dir / "locations.json"
             assert settings.global_config_file == temp_config_dir / "global.json"
-            assert settings.user_client_definitions_file == temp_config_dir / "client_definitions.json"
+            assert settings.user_client_definitions_file == (
+                temp_config_dir / "client_definitions.json"
+            )
             assert settings._client_definitions is None
 
     def test_config_directory_creation(self, mock_settings):
@@ -276,7 +278,9 @@ class TestConfigurationLoading:
         assert "test-client" in definitions.clients
         assert definitions.clients["test-client"].name == "Built-in Test Client"
 
-    def test_get_client_definitions_user_override(self, mock_settings, builtin_client_definitions, sample_client_definitions):
+    def test_get_client_definitions_user_override(
+        self, mock_settings, builtin_client_definitions, sample_client_definitions
+    ):
         """Test that user definitions override built-in definitions."""
         # Reset cache
         mock_settings._client_definitions = None
@@ -317,7 +321,10 @@ class TestConfigurationLoading:
         original_method = mock_settings.get_client_definitions
         mock_settings._client_definitions = None  # Reset cache
 
-        with patch("builtins.open", mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))):
+        with patch(
+            "builtins.open",
+            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+        ):
             with patch.object(Path, "exists", return_value=True):
                 # First call
                 definitions1 = original_method()
@@ -339,7 +346,9 @@ class TestConfigurationLoading:
         assert definitions.clients == {}
         assert "Could not load built-in client definitions" in caplog.text
 
-    def test_get_client_definitions_user_load_error(self, mock_settings, builtin_client_definitions, caplog):
+    def test_get_client_definitions_user_load_error(
+        self, mock_settings, builtin_client_definitions, caplog
+    ):
         """Test handling of user definitions load error."""
         # Reset cache
         mock_settings._client_definitions = None
@@ -494,7 +503,9 @@ class TestLocationManagement:
         mock_settings._save_locations_config(sample_locations_config)
 
         # Remove location
-        result = mock_settings.remove_location("/home/user/.config/claude/claude_desktop_config.json")
+        result = mock_settings.remove_location(
+            "/home/user/.config/claude/claude_desktop_config.json"
+        )
 
         assert result is True
 
@@ -542,7 +553,10 @@ class TestClientDefinitionsCaching:
             mock_user_config.return_value = str(temp_config_dir)
 
             # Mock built-in definitions loading for both instances
-            with patch("builtins.open", mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))):
+            with patch(
+                "builtins.open",
+                mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+            ):
                 with patch.object(Path, "exists", return_value=True):
                     settings1 = Settings()
                     settings2 = Settings()
@@ -566,7 +580,10 @@ class TestClientDefinitionsCaching:
         # Reset cache and mock built-in file loading
         mock_settings._client_definitions = None
 
-        with patch("builtins.open", mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))):
+        with patch(
+            "builtins.open",
+            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+        ):
             with patch.object(Path, "exists", return_value=True):
                 # Multiple calls should return same cached object
                 definitions1 = mock_settings.get_client_definitions()

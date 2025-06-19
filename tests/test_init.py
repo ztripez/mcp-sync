@@ -8,7 +8,7 @@ def test_handle_init_creates_file(tmp_path, monkeypatch, capsys):
     assert (tmp_path / ".mcp.json").exists()
     out = capsys.readouterr().out
     assert "Created .mcp.json" in out
-    
+
     # Verify the file has the correct structure
     import json
     with open(tmp_path / ".mcp.json") as f:

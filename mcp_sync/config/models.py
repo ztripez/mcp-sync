@@ -57,7 +57,7 @@ class LocationConfig(BaseModel):
 class GlobalConfig(BaseModel):
     """Global configuration structure."""
 
-    mcpServers: dict[str, MCPServerConfig] = Field(
+    mcpServers: dict[str, MCPServerConfig] = Field(  # noqa: N815
         default_factory=dict, description="MCP server configurations"
     )
 

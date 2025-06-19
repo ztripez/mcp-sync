@@ -107,13 +107,17 @@ class ClientRepository:
                     with open(path) as f:
                         config_data = json.load(f)
 
-                    found_configs.append(
-                        {"location": location.model_dump(), "config": config_data, "status": "found"}
-                    )
+                    found_configs.append({
+                        "location": location.model_dump(),
+                        "config": config_data,
+                        "status": "found"
+                    })
                 except (OSError, json.JSONDecodeError) as e:
-                    found_configs.append(
-                        {"location": location.model_dump(), "config": None, "status": f"error: {str(e)}"}
-                    )
+                    found_configs.append({
+                        "location": location.model_dump(),
+                        "config": None,
+                        "status": f"error: {str(e)}"
+                    })
             else:
                 found_configs.append(
                     {"location": location.model_dump(), "config": None, "status": "not_found"}
