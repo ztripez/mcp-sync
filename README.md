@@ -85,9 +85,28 @@ uv pip install -e .
 - `mcp-sync sync --location <path>` - Sync specific location only
 
 ### Server Management
-- `mcp-sync add-server <name>` - Add MCP server to sync
-- `mcp-sync remove-server <name>` - Remove server from sync
+- `mcp-sync add-server <name>` - Add MCP server to sync (interactive prompts)
+- `mcp-sync add-server <name> --command <cmd> --args <args> --env <vars> --scope <global|project>` - Add server with inline parameters
+- `mcp-sync remove-server <name>` - Remove server from sync (interactive prompts)
+- `mcp-sync remove-server <name> --scope <global|project>` - Remove server with inline scope
 - `mcp-sync list-servers` - Show all managed servers
+
+**Adding Servers**: When adding a server, you need to provide:
+- **Command**: The executable to run (e.g., `python`, `npx`, `node`)
+- **Arguments**: Command-line arguments (comma-separated, optional)
+- **Environment**: Environment variables as `KEY=value` pairs (comma-separated, optional)
+- **Scope**: Whether to add to global config (synced everywhere) or project config (this project only)
+
+Interactive example:
+```bash
+mcp-sync add-server filesystem
+# Prompts for: scope, command, args, env vars
+```
+
+Automated example:
+```bash
+mcp-sync add-server filesystem --command npx --args "-y,@modelcontextprotocol/server-filesystem,/home/user/docs" --scope global
+```
 
 ### Project Management
 - `mcp-sync init` - Create project `.mcp.json`
