@@ -1,0 +1,81 @@
+{
+  "clients": {
+    "claude-desktop": {
+      "name": "Claude Desktop",
+      "description": "Official Claude Desktop application",
+      "paths": {
+        "darwin": "~/Library/Application Support/Claude/claude_desktop_config.json",
+        "windows": "%APPDATA%/Claude/claude_desktop_config.json",
+        "linux": "~/.config/claude/claude_desktop_config.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "claude-code": {
+      "name": "Claude Code",
+      "description": "Claude CLI for code editing",
+      "paths": {
+        "darwin": "~/.claude/settings.json",
+        "windows": "~/.claude/settings.json",
+        "linux": "~/.claude/settings.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "cline": {
+      "name": "Cline",
+      "description": "VS Code extension for AI assistance",
+      "paths": {
+        "darwin": "~/Library/Application Support/Code/User/globalStorage/cline_mcp_settings.json",
+        "windows": "%APPDATA%/Code/User/globalStorage/cline_mcp_settings.json",
+        "linux": "~/.config/Code/User/globalStorage/cline_mcp_settings.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "roo": {
+      "name": "Roo",
+      "description": "Roo VS Code extension for AI assistance",
+      "paths": {
+        "darwin": "~/Library/Application Support/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/mcp_settings.json",
+        "windows": "%APPDATA%/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/mcp_settings.json",
+        "linux": "~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/mcp_settings.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "vscode-user": {
+      "name": "VS Code User Settings",
+      "description": "VS Code global user settings",
+      "paths": {
+        "darwin": "~/Library/Application Support/Code/User/settings.json",
+        "windows": "%APPDATA%/Code/User/settings.json",
+        "linux": "~/.config/Code/User/settings.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "cursor": {
+      "name": "Cursor",
+      "description": "Cursor AI code editor",
+      "paths": {
+        "darwin": "~/Library/Application Support/Cursor/User/settings.json",
+        "windows": "%APPDATA%/Cursor/User/settings.json",
+        "linux": "~/.config/Cursor/User/settings.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    },
+    "continue": {
+      "name": "Continue",
+      "description": "Continue VS Code extension",
+      "paths": {
+        "darwin": "~/.continue/config.json",
+        "windows": "~/.continue/config.json",
+        "linux": "~/.continue/config.json"
+      },
+      "config_format": "json",
+      "mcp_key": "mcpServers"
+    }
+  }
+}

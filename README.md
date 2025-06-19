@@ -112,6 +112,11 @@ mcp-sync add-server filesystem --command npx --args "-y,@modelcontextprotocol/se
 - `mcp-sync init` - Create project `.mcp.json`
 - `mcp-sync template` - Show template config
 
+### Client Management
+- `mcp-sync list-clients` - Show all supported clients and their detection status
+- `mcp-sync client-info [client-id]` - Show detailed client information and paths
+- `mcp-sync edit-client-definitions` - Edit user client definitions to add custom clients
+
 ## Configuration Hierarchy
 
 `mcp-sync` uses a three-tier configuration system:
@@ -131,11 +136,20 @@ mcp-sync add-server filesystem --command npx --args "-y,@modelcontextprotocol/se
 
 ## Supported Tools
 
-- **Claude Desktop** - `~/Library/Application Support/Claude/` (macOS)
-- **Claude Code** - `~/.claude/settings.json`
-- **Cline** - VS Code global storage
-- **VS Code** - User and workspace settings
-- **Custom tools** - Via manual location registration
+mcp-sync uses a **configuration-driven approach** to support AI tools and editors. Client definitions are managed through JSON configuration files.
+
+**Built-in client support:**
+- **Claude Desktop** - Official Claude Desktop application
+- **Claude Code** - Claude CLI for code editing
+- **Cline** - VS Code extension for AI assistance
+- **Roo** - Roo VS Code extension for AI assistance
+- **VS Code User Settings** - VS Code global user settings
+- **Cursor** - Cursor AI code editor
+- **Continue** - Continue VS Code extension
+
+Run `mcp-sync list-clients` to see which clients are detected on your system, or `mcp-sync client-info <client-id>` for detailed information about specific clients.
+
+**Adding custom clients:** Users can add their own client definitions by running `mcp-sync edit-client-definitions`. This creates `~/.mcp-sync/client_definitions.json` where custom client configurations can be added. User definitions take precedence over built-in ones, allowing customization and adding support for new tools without modifying the codebase.
 
 ## Example Workflow
 
