@@ -137,7 +137,7 @@ class TestMCPClientConfig:
         assert config.config_type == "file"
         assert config.paths == {
             "linux": "~/.config/test/config.json",
-            "darwin": "~/Library/test/config.json"
+            "darwin": "~/Library/test/config.json",
         }
         assert config.fallback_paths == {"linux": "~/.test/config.json"}
         assert config.cli_commands == {"list_mcp": "test mcp list"}
@@ -183,7 +183,7 @@ class TestMCPClientConfig:
         config = MCPClientConfig(
             name="CLI Client",
             config_type="cli",
-            cli_commands={"list_mcp": "cli mcp list", "add_mcp": "cli mcp add {name}"}
+            cli_commands={"list_mcp": "cli mcp list", "add_mcp": "cli mcp add {name}"},
         )
         assert config.config_type == "cli"
         assert config.cli_commands == {"list_mcp": "cli mcp list", "add_mcp": "cli mcp add {name}"}
@@ -194,7 +194,7 @@ class TestMCPClientConfig:
             name="File Client",
             config_type="file",
             paths={"linux": "~/.config/client/config.json"},
-            fallback_paths={"linux": "~/.client/config.json"}
+            fallback_paths={"linux": "~/.client/config.json"},
         )
         assert config.config_type == "file"
         assert config.paths == {"linux": "~/.config/client/config.json"}
@@ -262,10 +262,7 @@ class TestLocationConfig:
         assert config.description is None
 
         config_with_optional = LocationConfig(
-            path="/test",
-            name="Test",
-            client_name="client",
-            description="desc"
+            path="/test", name="Test", client_name="client", description="desc"
         )
         assert config_with_optional.client_name == "client"
         assert config_with_optional.description == "desc"
@@ -277,7 +274,7 @@ class TestLocationConfig:
             name="Claude Code",
             type="auto",
             config_type="cli",
-            client_name="claude-code"
+            client_name="claude-code",
         )
         assert config.path == "cli:claude-code"
         assert config.config_type == "cli"
@@ -311,12 +308,7 @@ class TestLocationConfig:
 
     def test_none_values_for_optional_fields(self):
         """Test explicit None values for optional fields."""
-        config = LocationConfig(
-            path="/test",
-            name="Test",
-            client_name=None,
-            description=None
-        )
+        config = LocationConfig(path="/test", name="Test", client_name=None, description=None)
         assert config.client_name is None
         assert config.description is None
 
@@ -359,10 +351,12 @@ class TestGlobalConfig:
 
     def test_multiple_servers(self):
         """Test configuration with multiple servers."""
-        config = GlobalConfig(mcpServers={
-            "server1": MCPServerConfig(command=["echo", "test1"]),
-            "server2": MCPServerConfig(command=["echo", "test2"], args=["--verbose"])
-        })
+        config = GlobalConfig(
+            mcpServers={
+                "server1": MCPServerConfig(command=["echo", "test1"]),
+                "server2": MCPServerConfig(command=["echo", "test2"], args=["--verbose"]),
+            }
+        )
         assert len(config.mcpServers) == 2
         assert "server1" in config.mcpServers
         assert "server2" in config.mcpServers
@@ -416,10 +410,12 @@ class TestClientDefinitions:
 
     def test_multiple_clients(self):
         """Test configuration with multiple clients."""
-        config = ClientDefinitions(clients={
-            "client1": MCPClientConfig(name="Client 1", config_type="file"),
-            "client2": MCPClientConfig(name="Client 2", config_type="cli")
-        })
+        config = ClientDefinitions(
+            clients={
+                "client1": MCPClientConfig(name="Client 1", config_type="file"),
+                "client2": MCPClientConfig(name="Client 2", config_type="cli"),
+            }
+        )
         assert len(config.clients) == 2
         assert "client1" in config.clients
         assert "client2" in config.clients
@@ -475,10 +471,12 @@ class TestLocationsConfig:
 
     def test_multiple_locations(self):
         """Test configuration with multiple locations."""
-        config = LocationsConfig(locations=[
-            LocationConfig(path="/path1", name="Location 1"),
-            LocationConfig(path="/path2", name="Location 2", type="auto")
-        ])
+        config = LocationsConfig(
+            locations=[
+                LocationConfig(path="/path1", name="Location 1"),
+                LocationConfig(path="/path2", name="Location 2", type="auto"),
+            ]
+        )
         assert len(config.locations) == 2
         assert config.locations[0].name == "Location 1"
         assert config.locations[1].name == "Location 2"
@@ -494,10 +492,12 @@ class TestLocationsConfig:
 
     def test_mixed_location_types(self):
         """Test configuration with mixed file and CLI locations."""
-        config = LocationsConfig(locations=[
-            LocationConfig(path="/file/path", name="File Location", config_type="file"),
-            LocationConfig(path="cli:client", name="CLI Location", config_type="cli")
-        ])
+        config = LocationsConfig(
+            locations=[
+                LocationConfig(path="/file/path", name="File Location", config_type="file"),
+                LocationConfig(path="cli:client", name="CLI Location", config_type="cli"),
+            ]
+        )
         assert len(config.locations) == 2
         assert config.locations[0].config_type == "file"
         assert config.locations[1].config_type == "cli"
@@ -529,14 +529,16 @@ class TestEdgeCases:
 
     def test_complex_nested_structure(self):
         """Test complex nested configuration structure."""
-        global_config = GlobalConfig(mcpServers={
-            "server1": MCPServerConfig(
-                command=["python", "-m", "server1"],
-                args=["--port", "8080"],
-                env={"DEBUG": "true"}
-            ),
-            "server2": MCPServerConfig(command=["echo", "server2"])
-        })
+        global_config = GlobalConfig(
+            mcpServers={
+                "server1": MCPServerConfig(
+                    command=["python", "-m", "server1"],
+                    args=["--port", "8080"],
+                    env={"DEBUG": "true"},
+                ),
+                "server2": MCPServerConfig(command=["echo", "server2"]),
+            }
+        )
 
         assert len(global_config.mcpServers) == 2
         assert global_config.mcpServers["server1"].env == {"DEBUG": "true"}

@@ -33,7 +33,7 @@ def test_full_client_management_workflow():
                 "darwin": "~/Library/Application Support/TestIDE/settings.json",
                 "windows": "%APPDATA%/TestIDE/settings.json",
             },
-            config_type="file"
+            config_type="file",
         )
 
         # Save custom client
@@ -56,6 +56,7 @@ def test_full_client_management_workflow():
 
         # Create a repository to test client location detection
         from mcp_sync.clients.repository import ClientRepository
+
         repository = ClientRepository()
 
         # Test path expansion for custom client with existing file
@@ -63,7 +64,7 @@ def test_full_client_management_workflow():
             name="Test IDE",
             description="A test IDE for development",
             paths={"linux": str(test_config_path)},
-            config_type="file"
+            config_type="file",
         )
 
         location = repository._get_client_location("test-ide", custom_client_existing)

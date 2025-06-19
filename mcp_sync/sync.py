@@ -455,6 +455,7 @@ class SyncEngine:
 
         # First, auto-discover clients and add them as locations
         from .clients.repository import ClientRepository
+
         repository = ClientRepository()
         discovered_clients = repository.discover_clients()
 
@@ -613,10 +614,12 @@ class SyncEngine:
                     result.imported_servers[server_name] = server_info["source"]
                 except Exception as e:
                     self.logger.warning(f"Failed to import server {server_name}: {e}")
-                    result.errors.append({
-                        "location": server_info["source"],
-                        "error": f"Failed to import {server_name}: {str(e)}"
-                    })
+                    result.errors.append(
+                        {
+                            "location": server_info["source"],
+                            "error": f"Failed to import {server_name}: {str(e)}",
+                        }
+                    )
 
             self.settings._save_global_config(global_config)
 

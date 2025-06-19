@@ -11,6 +11,7 @@ def test_handle_init_creates_file(tmp_path, monkeypatch, capsys):
 
     # Verify the file has the correct structure
     import json
+
     with open(tmp_path / ".mcp.json") as f:
         config = json.load(f)
     assert "mcpServers" in config

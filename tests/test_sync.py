@@ -92,9 +92,7 @@ def test_sync_cli_location_add_servers():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -113,9 +111,9 @@ def test_sync_cli_location_add_servers():
     result = SyncResult([], [], [])
 
     # Mock the CLI executor methods
-    with patch.object(engine.executor, 'get_mcp_servers', return_value={}):
-        with patch.object(engine.executor, 'add_mcp_server', return_value=True) as mock_add:
-            with patch.object(engine.executor, 'remove_mcp_server', return_value=True):
+    with patch.object(engine.executor, "get_mcp_servers", return_value={}):
+        with patch.object(engine.executor, "add_mcp_server", return_value=True) as mock_add:
+            with patch.object(engine.executor, "remove_mcp_server", return_value=True):
                 engine._sync_cli_location(cli_location, master_servers, result)
 
                 # Should update the location and add both servers
@@ -133,9 +131,7 @@ def test_sync_cli_location_remove_servers():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -160,10 +156,10 @@ def test_sync_cli_location_remove_servers():
     result = SyncResult([], [], [])
 
     # Mock the CLI executor methods
-    with patch.object(engine.executor, 'get_mcp_servers', return_value=existing_servers):
-        with patch.object(engine.executor, 'add_mcp_server', return_value=True):
+    with patch.object(engine.executor, "get_mcp_servers", return_value=existing_servers):
+        with patch.object(engine.executor, "add_mcp_server", return_value=True):
             with patch.object(
-                engine.executor, 'remove_mcp_server', return_value=True
+                engine.executor, "remove_mcp_server", return_value=True
             ) as mock_remove:
                 engine._sync_cli_location(cli_location, master_servers, result)
 
@@ -182,9 +178,7 @@ def test_sync_cli_location_detect_conflicts():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -202,9 +196,9 @@ def test_sync_cli_location_detect_conflicts():
     result = SyncResult([], [], [])
 
     # Mock the CLI executor methods
-    with patch.object(engine.executor, 'get_mcp_servers', return_value=existing_servers):
-        with patch.object(engine.executor, 'add_mcp_server', return_value=True):
-            with patch.object(engine.executor, 'remove_mcp_server', return_value=True):
+    with patch.object(engine.executor, "get_mcp_servers", return_value=existing_servers):
+        with patch.object(engine.executor, "add_mcp_server", return_value=True):
+            with patch.object(engine.executor, "remove_mcp_server", return_value=True):
                 engine._sync_cli_location(cli_location, master_servers, result)
 
                 # Should detect conflict
@@ -221,9 +215,7 @@ def test_sync_cli_location_no_changes_needed():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -233,7 +225,7 @@ def test_sync_cli_location_no_changes_needed():
     # Set up CLI servers that match master exactly
     existing_servers = {
         "server1": {"command": ["echo", "test1"]},
-        "server2": {"command": ["echo", "test2"]}
+        "server2": {"command": ["echo", "test2"]},
     }
 
     # Master has same servers
@@ -247,9 +239,9 @@ def test_sync_cli_location_no_changes_needed():
     result = SyncResult([], [], [])
 
     # Mock the CLI executor methods
-    with patch.object(engine.executor, 'get_mcp_servers', return_value=existing_servers):
-        with patch.object(engine.executor, 'add_mcp_server', return_value=True):
-            with patch.object(engine.executor, 'remove_mcp_server', return_value=True):
+    with patch.object(engine.executor, "get_mcp_servers", return_value=existing_servers):
+        with patch.object(engine.executor, "add_mcp_server", return_value=True):
+            with patch.object(engine.executor, "remove_mcp_server", return_value=True):
                 engine._sync_cli_location(cli_location, master_servers, result)
 
                 # Should not update anything (no changes needed)
@@ -264,9 +256,7 @@ def test_sync_cli_location_dry_run():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -284,10 +274,10 @@ def test_sync_cli_location_dry_run():
     result = SyncResult([], [], [], dry_run=True)
 
     # Mock the CLI executor methods
-    with patch.object(engine.executor, 'get_mcp_servers', return_value=existing_servers):
-        with patch.object(engine.executor, 'add_mcp_server', return_value=True) as mock_add:
+    with patch.object(engine.executor, "get_mcp_servers", return_value=existing_servers):
+        with patch.object(engine.executor, "add_mcp_server", return_value=True) as mock_add:
             with patch.object(
-                engine.executor, 'remove_mcp_server', return_value=True
+                engine.executor, "remove_mcp_server", return_value=True
             ) as mock_remove:
                 engine._sync_cli_location(cli_location, master_servers, result)
 
@@ -311,9 +301,7 @@ def test_sync_all_includes_cli_clients():
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -349,18 +337,22 @@ def test_vacuum_includes_cli_clients():
     """Test that vacuum includes CLI clients"""
     # Set up CLI and file locations
     cli_location = {
-        "path": "cli:claude-code", "name": "claude-code", "type": "manual", "config_type": "cli"
+        "path": "cli:claude-code",
+        "name": "claude-code",
+        "type": "manual",
+        "config_type": "cli",
     }
     file_location = {
-        "path": "/test/file.json", "name": "test-file", "type": "manual", "config_type": "file"
+        "path": "/test/file.json",
+        "name": "test-file",
+        "type": "manual",
+        "config_type": "file",
     }
 
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -377,13 +369,13 @@ def test_vacuum_includes_cli_clients():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
         # Mock file operations to avoid actual file reads
         with patch.object(engine, "_read_json_config") as mock_read:
-            with patch.object(engine.executor, 'get_mcp_servers', return_value=cli_servers):
+            with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
                 # Mock file config with servers
                 mock_read.return_value = {
                     "mcpServers": {
@@ -411,18 +403,22 @@ def test_vacuum_includes_cli_clients():
 def test_vacuum_cli_conflict_resolution():
     """Test vacuum conflict resolution between CLI and file clients"""
     cli_location = {
-        "path": "cli:claude-code", "name": "claude-code", "type": "manual", "config_type": "cli"
+        "path": "cli:claude-code",
+        "name": "claude-code",
+        "type": "manual",
+        "config_type": "cli",
     }
     file_location = {
-        "path": "/test/file.json", "name": "test-file", "type": "manual", "config_type": "file"
+        "path": "/test/file.json",
+        "name": "test-file",
+        "type": "manual",
+        "config_type": "file",
     }
 
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -436,12 +432,12 @@ def test_vacuum_cli_conflict_resolution():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
         with patch.object(engine, "_read_json_config") as mock_read:
-            with patch.object(engine.executor, 'get_mcp_servers', return_value=cli_servers):
+            with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
                 mock_read.return_value = {
                     "mcpServers": {"shared-server": {"command": ["echo", "from-file"]}}
                 }
@@ -454,7 +450,9 @@ def test_vacuum_cli_conflict_resolution():
                     mock_resolve.assert_called_once()
                     args = mock_resolve.call_args[0]
                     assert args[0] == "shared-server"  # server name
-                    assert args[1] == {"command": ["echo", "from-cli"]}  # existing (CLI processed first)  # noqa: E501
+                    assert args[1] == {
+                        "command": ["echo", "from-cli"]
+                    }  # existing (CLI processed first)  # noqa: E501
                     assert args[2] == "claude-code"  # existing source
                     assert args[3] == {"command": ["echo", "from-file"]}  # new (file)
                     assert args[4] == "test-file"  # new source
@@ -473,15 +471,16 @@ def test_vacuum_cli_conflict_resolution():
 def test_vacuum_cli_no_servers():
     """Test vacuum when CLI client has no servers"""
     cli_location = {
-        "path": "cli:claude-code", "name": "claude-code", "type": "manual", "config_type": "cli"
+        "path": "cli:claude-code",
+        "name": "claude-code",
+        "type": "manual",
+        "config_type": "cli",
     }
 
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -491,11 +490,11 @@ def test_vacuum_cli_no_servers():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
-        with patch.object(engine.executor, 'get_mcp_servers', return_value={}):
+        with patch.object(engine.executor, "get_mcp_servers", return_value={}):
             result = engine.vacuum_configs()
 
             # Should complete without errors
@@ -507,15 +506,16 @@ def test_vacuum_cli_no_servers():
 def test_vacuum_saves_to_global_config():
     """Test that vacuum saves discovered servers to global config"""
     cli_location = {
-        "path": "cli:claude-code", "name": "claude-code", "type": "manual", "config_type": "cli"
+        "path": "cli:claude-code",
+        "name": "claude-code",
+        "type": "manual",
+        "config_type": "cli",
     }
 
     client_definitions = ClientDefinitions(
         clients={
             "claude-code": MCPClientConfig(
-                name="Claude Code",
-                config_type="cli",
-                cli_commands={"list_mcp": "claude mcp list"}
+                name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
             )
         }
     )
@@ -525,11 +525,11 @@ def test_vacuum_saves_to_global_config():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
-        with patch.object(engine.executor, 'get_mcp_servers', return_value=cli_servers):
+        with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
             result = engine.vacuum_configs()
 
             # Should import the server
@@ -550,9 +550,7 @@ def test_vacuum_auto_resolve_first():
     client_definitions = ClientDefinitions(
         clients={
             "cli": MCPClientConfig(
-                name="CLI Client",
-                config_type="cli",
-                cli_commands={"list_mcp": "cli mcp list"}
+                name="CLI Client", config_type="cli", cli_commands={"list_mcp": "cli mcp list"}
             )
         }
     )
@@ -562,12 +560,12 @@ def test_vacuum_auto_resolve_first():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
         with patch.object(engine, "_read_json_config") as mock_read:
-            with patch.object(engine.executor, 'get_mcp_servers', return_value=cli_servers):
+            with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
                 mock_read.return_value = {"mcpServers": {"srv": {"command": ["echo", "file"]}}}
                 with patch.object(engine, "_resolve_conflict") as mock_resolve:
                     result = engine.vacuum_configs(auto_resolve="first")
@@ -584,17 +582,13 @@ def test_vacuum_skip_existing():
     client_definitions = ClientDefinitions(
         clients={
             "code": MCPClientConfig(
-                name="Code Client",
-                config_type="cli",
-                cli_commands={"list_mcp": "code mcp list"}
+                name="Code Client", config_type="cli", cli_commands={"list_mcp": "code mcp list"}
             )
         }
     )
 
     # Set up global config with existing server
-    global_config = GlobalConfig(
-        mcpServers={"existing": MCPServerConfig(command=["echo", "old"])}
-    )
+    global_config = GlobalConfig(mcpServers={"existing": MCPServerConfig(command=["echo", "old"])})
     settings = MockSettings(
         locations=[cli_loc], global_config=global_config, client_definitions=client_definitions
     )
@@ -604,11 +598,11 @@ def test_vacuum_skip_existing():
     engine = SyncEngine(settings)
 
     # Mock the repository.discover_clients() call
-    with patch('mcp_sync.clients.repository.ClientRepository') as mock_repo_class:
+    with patch("mcp_sync.clients.repository.ClientRepository") as mock_repo_class:
         mock_repo = mock_repo_class.return_value
         mock_repo.discover_clients.return_value = []  # No new clients discovered
 
-        with patch.object(engine.executor, 'get_mcp_servers', return_value=cli_servers):
+        with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
             result = engine.vacuum_configs(skip_existing=True)
 
             assert "existing" in result.skipped_servers

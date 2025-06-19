@@ -145,9 +145,7 @@ def test_is_cli_available_success(mock_run):
     mock_run.return_value = Mock(returncode=0)
 
     client_config = MCPClientConfig(
-        name="Test CLI",
-        config_type="cli",
-        cli_commands={"list_mcp": "claude mcp list"}
+        name="Test CLI", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
     )
 
     assert executor.is_cli_available(client_config)
@@ -168,9 +166,7 @@ def test_is_cli_available_failure(mock_run):
     mock_run.return_value = Mock(returncode=1)
 
     client_config = MCPClientConfig(
-        name="Test CLI",
-        config_type="cli",
-        cli_commands={"list_mcp": "nonexistent mcp list"}
+        name="Test CLI", config_type="cli", cli_commands={"list_mcp": "nonexistent mcp list"}
     )
 
     assert not executor.is_cli_available(client_config)
@@ -190,9 +186,7 @@ def test_get_cli_mcp_servers(mock_run):
     )
 
     client_config = MCPClientConfig(
-        name="Claude Code",
-        config_type="cli",
-        cli_commands={"list_mcp": "claude mcp list"}
+        name="Claude Code", config_type="cli", cli_commands={"list_mcp": "claude mcp list"}
     )
 
     servers = executor.get_mcp_servers("claude-code", client_config)
@@ -228,12 +222,16 @@ def test_add_cli_mcp_server(mock_run):
                 "claude mcp add {name} -e {env_flags} --scope {scope} "
                 "--transport {transport} {command_args}"
             )
-        }
+        },
     )
 
     success = executor.add_mcp_server(
-        "claude-code", client_config, "test-server", ["echo", "test"],
-        env_vars={"KEY": "value"}, scope="user"
+        "claude-code",
+        client_config,
+        "test-server",
+        ["echo", "test"],
+        env_vars={"KEY": "value"},
+        scope="user",
     )
 
     assert success
@@ -261,8 +259,8 @@ def test_remove_cli_mcp_server_with_scope_detection(mock_run):
         config_type="cli",
         cli_commands={
             "get_mcp": "claude mcp get {name}",
-            "remove_mcp": "claude mcp remove --scope {scope} {name}"
-        }
+            "remove_mcp": "claude mcp remove --scope {scope} {name}",
+        },
     )
 
     success = executor.remove_mcp_server("claude-code", client_config, "test-server")
@@ -280,9 +278,7 @@ def test_detect_cli_server_scope(mock_run):
     executor = CLIExecutor()
 
     client_config = MCPClientConfig(
-        name="Claude Code",
-        config_type="cli",
-        cli_commands={"get_mcp": "claude mcp get {name}"}
+        name="Claude Code", config_type="cli", cli_commands={"get_mcp": "claude mcp get {name}"}
     )
 
     # Test user scope detection

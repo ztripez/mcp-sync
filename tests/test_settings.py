@@ -297,6 +297,7 @@ class TestConfigurationLoading:
 
         # Patch the module's __file__ attribute to point to our mock location
         import mcp_sync.config.settings as settings_module
+
         original_file = settings_module.__file__
         try:
             settings_module.__file__ = str(builtin_path.parent / "settings.py")
@@ -323,7 +324,7 @@ class TestConfigurationLoading:
 
         with patch(
             "builtins.open",
-            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump())),
         ):
             with patch.object(Path, "exists", return_value=True):
                 # First call
@@ -365,6 +366,7 @@ class TestConfigurationLoading:
 
         # Patch the module's __file__ attribute to point to our mock location
         import mcp_sync.config.settings as settings_module
+
         original_file = settings_module.__file__
         try:
             settings_module.__file__ = str(builtin_path.parent / "settings.py")
@@ -555,7 +557,7 @@ class TestClientDefinitionsCaching:
             # Mock built-in definitions loading for both instances
             with patch(
                 "builtins.open",
-                mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+                mock_open(read_data=json.dumps(builtin_client_definitions.model_dump())),
             ):
                 with patch.object(Path, "exists", return_value=True):
                     settings1 = Settings()
@@ -582,7 +584,7 @@ class TestClientDefinitionsCaching:
 
         with patch(
             "builtins.open",
-            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump()))
+            mock_open(read_data=json.dumps(builtin_client_definitions.model_dump())),
         ):
             with patch.object(Path, "exists", return_value=True):
                 # Multiple calls should return same cached object
@@ -733,6 +735,7 @@ class TestGlobalSettingsFunction:
         """Test that get_settings() returns the same instance."""
         # Clear any existing global instance
         import mcp_sync.config.settings
+
         mcp_sync.config.settings._settings = None
 
         settings1 = get_settings()
@@ -744,6 +747,7 @@ class TestGlobalSettingsFunction:
         """Test that get_settings() creates instance on first call."""
         # Clear any existing global instance
         import mcp_sync.config.settings
+
         mcp_sync.config.settings._settings = None
 
         assert mcp_sync.config.settings._settings is None
@@ -758,6 +762,7 @@ class TestGlobalSettingsFunction:
         """Test that get_settings() returns existing instance if available."""
         # Clear and set a mock instance
         import mcp_sync.config.settings
+
         mock_settings = Mock(spec=Settings)
         mcp_sync.config.settings._settings = mock_settings
 
@@ -786,10 +791,7 @@ class TestEdgeCases:
         """Test handling of large configuration files."""
         # Create a large locations config
         large_locations = LocationsConfig(
-            locations=[
-                LocationConfig(path=f"/path/{i}", name=f"Location {i}")
-                for i in range(1000)
-            ]
+            locations=[LocationConfig(path=f"/path/{i}", name=f"Location {i}") for i in range(1000)]
         )
 
         # Should handle large configs without issues

@@ -1,6 +1,5 @@
 """Pydantic models for configuration validation."""
 
-
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -25,12 +24,8 @@ class MCPClientConfig(BaseModel):
     name: str = Field(..., description="Display name of the client")
     description: str = Field(default="", description="Description of the client")
     config_type: str = Field(default="file", description="Type of configuration (file or cli)")
-    paths: dict[str, str] | None = Field(
-        default=None, description="Platform-specific config paths"
-    )
-    fallback_paths: dict[str, str] | None = Field(
-        default=None, description="Fallback config paths"
-    )
+    paths: dict[str, str] | None = Field(default=None, description="Platform-specific config paths")
+    fallback_paths: dict[str, str] | None = Field(default=None, description="Fallback config paths")
     cli_commands: dict[str, str] | None = Field(
         default=None, description="CLI commands for management"
     )

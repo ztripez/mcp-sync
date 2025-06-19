@@ -207,7 +207,7 @@ def handle_scan(repository):
             print(f"\n{client['client_name']} ({client['type']})")
             print(f"  Path: {client['path']}")
             print(f"  Config type: {client['config_type']}")
-            if client.get('description'):
+            if client.get("description"):
                 print(f"  Description: {client['description']}")
 
     # Then, scan registered locations
@@ -691,7 +691,7 @@ def handle_edit_client_definitions(settings):
                         "windows": "%APPDATA%/Client/config.json",
                         "linux": "~/.config/client/config.json",
                     },
-                    config_type="file"
+                    config_type="file",
                 )
             }
         )
