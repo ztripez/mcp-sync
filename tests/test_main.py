@@ -19,6 +19,9 @@ def test_create_parser_subcommands():
         ("vacuum", []),
         ("init", []),
         ("template", []),
+        ("list-clients", []),
+        ("client-info", []),
+        ("edit-client-definitions", []),
     ]
     for cmd, extra in commands:
         args = parser.parse_args([cmd] + extra)

@@ -35,10 +35,7 @@ jobs:
       run: uv run ruff format --check .
 
     - name: Run tests
-      run: |
-        # Add when tests exist
-        # uv run pytest
-        echo "No tests configured yet"
+      run: uv run pytest tests/ -v
 
     - name: Test installation
       run: |
