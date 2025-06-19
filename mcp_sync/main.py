@@ -48,15 +48,23 @@ def create_parser():
     # Server management
     add_server_parser = subparsers.add_parser("add-server", help="Add MCP server to sync")
     add_server_parser.add_argument("name", help="Server name")
+    add_server_parser.add_argument("--command", help="Command to run the server")
+    add_server_parser.add_argument("--args", help="Command arguments (comma-separated)")
+    add_server_parser.add_argument("--env", help="Environment variables (KEY=value,KEY2=value2)")
+    add_server_parser.add_argument("--scope", choices=["global", "project"], help="Config scope")
 
     remove_server_parser = subparsers.add_parser("remove-server", help="Remove server from sync")
     remove_server_parser.add_argument("name", help="Server name")
+    remove_server_parser.add_argument("--scope", choices=["global", "project"], help="Config scope")
 
     subparsers.add_parser("list-servers", help="Show all managed servers")
 
     # Migration
-    subparsers.add_parser(
+    vacuum_parser = subparsers.add_parser(
         "vacuum", help="Import existing MCP configs from all discovered locations"
+    )
+    vacuum_parser.add_argument(
+        "--auto-resolve", choices=["first", "last"], help="Auto-resolve conflicts without prompts"
     )
 
     # Project management
@@ -93,9 +101,9 @@ def main():
         case "sync":
             handle_sync(sync_engine, args)
         case "add-server":
-            handle_add_server(sync_engine, args.name)
+            handle_add_server(sync_engine, args)
         case "remove-server":
-            handle_remove_server(sync_engine, args.name)
+            handle_remove_server(sync_engine, args)
         case "list-servers":
             handle_list_servers(sync_engine)
         case "vacuum":
@@ -249,10 +257,19 @@ def handle_sync(sync_engine, args):
         print("All configurations are already in sync.")
 
 
-def handle_add_server(sync_engine, name):
+def handle_add_server(sync_engine, args):
+    name = args.name
+
     try:
-        scope = _prompt_for_server_scope()
-        config = _prompt_for_server_config(name)
+        # Check if inline parameters provided
+        if args.command and args.scope:
+            # Inline mode
+            scope = args.scope
+            config = _build_server_config_from_args(args)
+        else:
+            # Interactive mode
+            scope = _prompt_for_server_scope()
+            config = _prompt_for_server_config(name)
 
         if scope == "global":
             sync_engine.add_server_to_global(name, config)
@@ -262,6 +279,25 @@ def handle_add_server(sync_engine, name):
             print(f"Added '{name}' to project config")
     except (KeyboardInterrupt, EOFError):
         print("\nCancelled")
+
+
+def _build_server_config_from_args(args):
+    """Build server config from inline command arguments"""
+    config = {"command": args.command}
+
+    if args.args:
+        config["args"] = [arg.strip() for arg in args.args.split(",")]
+
+    if args.env:
+        env_vars = {}
+        for pair in args.env.split(","):
+            if "=" in pair:
+                key, value = pair.split("=", 1)
+                env_vars[key.strip()] = value.strip()
+        if env_vars:
+            config["env"] = env_vars
+
+    return config
 
 
 def _prompt_for_server_scope():
@@ -309,9 +345,15 @@ def _prompt_for_env_vars():
     return env_vars
 
 
-def handle_remove_server(sync_engine, name):
+def handle_remove_server(sync_engine, args):
+    name = args.name
+
     try:
-        scope = _prompt_for_removal_scope(name)
+        # Check if inline scope provided
+        if args.scope:
+            scope = args.scope
+        else:
+            scope = _prompt_for_removal_scope(name)
 
         if scope == "global":
             if sync_engine.remove_server_from_global(name):
