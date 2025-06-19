@@ -1,16 +1,29 @@
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
+from . import setup_logging
 from .config import ConfigManager
 from .sync import SyncEngine
+
+logger = logging.getLogger(__name__)
 
 
 def create_parser():
     parser = argparse.ArgumentParser(
         prog="mcp-sync",
         description="Sync MCP (Model Context Protocol) configurations across AI tools",
+    )
+
+    # Global options
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Set logging level (default: INFO)",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -87,49 +100,91 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
+    # Setup logging
+    log_level = "DEBUG" if args.verbose else args.log_level
+    setup_logging(log_level)
+
+    logger.debug(f"Starting mcp-sync with command: {args.command}")
+    logger.debug(f"Arguments: {vars(args)}")
+
     if not args.command:
         parser.print_help()
         sys.exit(1)
 
-    config_manager = ConfigManager()
-    sync_engine = SyncEngine(config_manager)
+    try:
+        config_manager = ConfigManager()
+        sync_engine = SyncEngine(config_manager)
+        logger.debug("Initialized ConfigManager and SyncEngine")
+    except Exception as e:
+        logger.error(f"Failed to initialize configuration: {e}")
+        print(f"Error: Failed to initialize configuration: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    match args.command:
-        case "scan":
-            handle_scan(config_manager)
-        case "status":
-            handle_status(sync_engine)
-        case "diff":
-            handle_diff(sync_engine)
-        case "add-location":
-            handle_add_location(config_manager, args.path, args.name)
-        case "remove-location":
-            handle_remove_location(config_manager, args.path)
-        case "list-locations":
-            handle_list_locations(config_manager)
-        case "sync":
-            handle_sync(sync_engine, args)
-        case "add-server":
-            handle_add_server(sync_engine, args)
-        case "remove-server":
-            handle_remove_server(sync_engine, args)
-        case "list-servers":
-            handle_list_servers(sync_engine)
-        case "vacuum":
-            handle_vacuum(sync_engine)
-        case "init":
-            handle_init()
-        case "template":
-            handle_template()
-        case "list-clients":
-            handle_list_clients(config_manager)
-        case "client-info":
-            handle_client_info(config_manager, args.client)
-        case "edit-client-definitions":
-            handle_edit_client_definitions(config_manager)
-        case _:
-            print(f"Unknown command: {args.command}")
-            sys.exit(1)
+    try:
+        match args.command:
+            case "scan":
+                handle_scan(config_manager)
+            case "status":
+                handle_status(sync_engine)
+            case "diff":
+                handle_diff(sync_engine)
+            case "add-location":
+                handle_add_location(config_manager, args.path, args.name)
+            case "remove-location":
+                handle_remove_location(config_manager, args.path)
+            case "list-locations":
+                handle_list_locations(config_manager)
+            case "sync":
+                handle_sync(sync_engine, args)
+            case "add-server":
+                handle_add_server(sync_engine, args)
+            case "remove-server":
+                handle_remove_server(sync_engine, args)
+            case "list-servers":
+                handle_list_servers(sync_engine)
+            case "vacuum":
+                handle_vacuum(sync_engine)
+            case "init":
+                handle_init()
+            case "template":
+                handle_template()
+            case "list-clients":
+                handle_list_clients(config_manager)
+            case "client-info":
+                handle_client_info(config_manager, args.client)
+            case "edit-client-definitions":
+                handle_edit_client_definitions(config_manager)
+            case _:
+                logger.error(f"Unknown command: {args.command}")
+                print(f"Unknown command: {args.command}")
+                sys.exit(1)
+
+        logger.debug(f"Command {args.command} completed successfully")
+
+    except KeyboardInterrupt:
+        logger.info("Operation cancelled by user")
+        print("\nOperation cancelled.")
+        sys.exit(130)  # Standard exit code for SIGINT
+    except PermissionError as e:
+        logger.error(f"Permission denied: {e}")
+        print(f"Error: Permission denied. {e}", file=sys.stderr)
+        sys.exit(1)
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        print(f"Error: File not found. {e}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in configuration file: {e}")
+        print(f"Error: Invalid JSON in configuration file. {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unexpected error during {args.command}: {e}", exc_info=True)
+        print(
+            "Error: An unexpected error occurred. Use --verbose for more details.", file=sys.stderr
+        )
+        if args.verbose:
+            print(f"Details: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def handle_scan(config_manager):
@@ -573,8 +628,12 @@ def handle_client_info(config_manager, client_id):
 
 def handle_edit_client_definitions(config_manager):
     """Open user client definitions file for editing"""
+    import logging
     import os
+    import re
     import subprocess
+
+    logger = logging.getLogger(__name__)
 
     # Ensure the file exists
     if not config_manager.user_client_definitions_file.exists():
@@ -603,19 +662,57 @@ def handle_edit_client_definitions(config_manager):
     # Try to open with default editor
     editor = os.environ.get("EDITOR", "nano")
 
-    # Basic validation to prevent command injection
-    if not editor or " " in editor or ";" in editor or "&" in editor:
-        print(f"Invalid editor: {editor}")
+    # Enhanced validation to prevent command injection
+    if not editor or not isinstance(editor, str):
+        print("Invalid or missing EDITOR environment variable.")
         print(f"Please manually edit: {file_path}")
         return
 
-    try:
-        subprocess.run([editor, str(file_path)], check=True)  # noqa: S603
-        print("Client definitions updated. Run 'mcp-sync scan' to reload.")
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print(f"Could not open editor '{editor}'.")
+    # Only allow safe editor names (no paths, arguments, or shell metacharacters)
+    if not re.match(r"^[a-zA-Z0-9_.-]+$", editor):
+        logger.warning(f"Unsafe editor name detected: {editor}")
+        print(f"Editor name contains unsafe characters: {editor}")
+        print("Only alphanumeric characters, dots, hyphens, and underscores are allowed.")
         print(f"Please manually edit: {file_path}")
-        print("Or set the EDITOR environment variable to your preferred editor.")
+        return
+
+    # Validate file path
+    try:
+        validated_path = Path(file_path).resolve()
+        if not validated_path.exists():
+            logger.error(f"File does not exist: {validated_path}")
+            print(f"File does not exist: {validated_path}")
+            return
+    except (OSError, ValueError) as e:
+        logger.error(f"Invalid file path: {e}")
+        print(f"Invalid file path: {file_path}")
+        return
+
+    try:
+        # Use subprocess.run with explicit arguments list (safer than shell=True)
+        subprocess.run(
+            [editor, str(validated_path)],
+            check=True,
+            timeout=300,  # 5 minute timeout for editing
+            text=True,
+        )
+        print("Client definitions updated. Run 'mcp-sync scan' to reload.")
+    except subprocess.TimeoutExpired:
+        logger.warning("Editor timed out after 5 minutes")
+        print("Editor session timed out.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Editor failed with exit code {e.returncode}")
+        print(f"Editor failed with exit code {e.returncode}.")
+        print(f"Please manually edit: {file_path}")
+    except FileNotFoundError:
+        logger.error(f"Editor not found: {editor}")
+        print(f"Editor '{editor}' not found in PATH.")
+        print(f"Please manually edit: {file_path}")
+        print("Or set the EDITOR environment variable to a valid editor.")
+    except Exception as e:
+        logger.error(f"Unexpected error opening editor: {e}")
+        print(f"Unexpected error: {e}")
+        print(f"Please manually edit: {file_path}")
 
 
 if __name__ == "__main__":
