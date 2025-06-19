@@ -294,12 +294,26 @@ class SyncEngine:
         # Location servers
         locations = self.config_manager.get_locations()
         for location in locations:
-            location_path = Path(location["path"])
-            config = self._read_json_config(location_path)
-            if config is not None:
-                status["location_servers"][location["name"]] = config.get("mcpServers", {})
+            # Handle CLI clients differently from file-based clients
+            if location.get("config_type") == "cli" or location["path"].startswith("cli:"):
+                client_id = (
+                    location["path"].replace("cli:", "")
+                    if location["path"].startswith("cli:")
+                    else location["name"]
+                )
+                cli_servers = self.config_manager.get_cli_mcp_servers(client_id)
+                if cli_servers is not None:
+                    status["location_servers"][location["name"]] = cli_servers
+                else:
+                    status["location_servers"][location["name"]] = {}
             else:
-                status["location_servers"][location["name"]] = "error"
+                # File-based client
+                location_path = Path(location["path"])
+                config = self._read_json_config(location_path)
+                if config is not None:
+                    status["location_servers"][location["name"]] = config.get("mcpServers", {})
+                else:
+                    status["location_servers"][location["name"]] = "error"
 
         return status
 
