@@ -79,14 +79,16 @@ def test_platform_specific_paths():
 
     # Test path expansion with different templates
     test_cases = [
-        ("~/test/path.json", "test/path.json"),
-        ("~/.config/app/settings.json", ".config/app/settings.json"),
+        ("~/test/path.json", Path("test/path.json")),
+        ("~/.config/app/settings.json", Path(".config/app/settings.json")),
     ]
 
-    for template, expected_suffix in test_cases:
+    for template, expected_path in test_cases:
         expanded = cm._expand_path_template(template)
-        assert str(expanded).endswith(expected_suffix)
-        assert str(expanded).startswith(str(Path.home()))
+        expanded_path = Path(expanded)
+        assert str(expanded_path).startswith(str(Path.home()))
+        # Compare path parts for cross-platform compatibility
+        assert expanded_path.parts[-len(expected_path.parts) :] == expected_path.parts
 
 
 def test_default_locations_discovery():

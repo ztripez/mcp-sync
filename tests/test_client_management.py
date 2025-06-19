@@ -99,7 +99,10 @@ def test_expand_path_template():
     # Test home directory expansion
     expanded = cm._expand_path_template("~/.test/config.json")
     assert str(expanded).startswith(str(Path.home()))
-    assert str(expanded).endswith(".test/config.json")
+    # Use Path for cross-platform comparison
+    expected_suffix = Path(".test/config.json")
+    assert Path(expanded).name == expected_suffix.name
+    assert Path(expanded).parts[-2:] == expected_suffix.parts
 
 
 def test_handle_list_clients(capsys):
