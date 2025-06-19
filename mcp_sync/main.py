@@ -3,9 +3,11 @@ import json
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from . import setup_logging
-from .config import ConfigManager
+from .clients.repository import ClientRepository
+from .config.settings import get_settings
 from .sync import SyncEngine
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,7 @@ def create_parser():
     add_server_parser = subparsers.add_parser("add-server", help="Add MCP server to sync")
     add_server_parser.add_argument("name", help="Server name")
     add_server_parser.add_argument("--cmd", dest="server_cmd", help="Command to run the server")
-    add_server_parser.add_argument("--args", help="Command arguments (comma-separated)")
+    add_server_parser.add_argument("--args", help="Command arguments (space-separated)")
     add_server_parser.add_argument("--env", help="Environment variables (KEY=value,KEY2=value2)")
     add_server_parser.add_argument("--scope", choices=["global", "project"], help="Config scope")
 
@@ -117,9 +119,10 @@ def main():
         sys.exit(1)
 
     try:
-        config_manager = ConfigManager()
-        sync_engine = SyncEngine(config_manager)
-        logger.debug("Initialized ConfigManager and SyncEngine")
+        settings = get_settings()
+        repository = ClientRepository()
+        sync_engine = SyncEngine(settings)
+        logger.debug("Initialized settings and SyncEngine")
     except Exception as e:
         logger.error(f"Failed to initialize configuration: {e}")
         print(f"Error: Failed to initialize configuration: {e}", file=sys.stderr)
@@ -128,17 +131,17 @@ def main():
     try:
         match args.command:
             case "scan":
-                handle_scan(config_manager)
+                handle_scan(repository)
             case "status":
                 handle_status(sync_engine)
             case "diff":
                 handle_diff(sync_engine)
             case "add-location":
-                handle_add_location(config_manager, args.path, args.name)
+                handle_add_location(settings, args.path, args.name)
             case "remove-location":
-                handle_remove_location(config_manager, args.path)
+                handle_remove_location(settings, args.path)
             case "list-locations":
-                handle_list_locations(config_manager)
+                handle_list_locations(settings)
             case "sync":
                 handle_sync(sync_engine, args)
             case "add-server":
@@ -154,11 +157,11 @@ def main():
             case "template":
                 handle_template()
             case "list-clients":
-                handle_list_clients(config_manager)
+                handle_list_clients(settings)
             case "client-info":
-                handle_client_info(config_manager, args.client)
+                handle_client_info(settings, args.client)
             case "edit-client-definitions":
-                handle_edit_client_definitions(config_manager)
+                handle_edit_client_definitions(settings)
             case _:
                 logger.error(f"Unknown command: {args.command}")
                 print(f"Unknown command: {args.command}")
@@ -192,28 +195,43 @@ def main():
         sys.exit(1)
 
 
-def handle_scan(config_manager):
+def handle_scan(repository):
     print("Scanning for MCP configurations...")
-    configs = config_manager.scan_configs()
 
-    if not configs:
-        print("No registered config locations found.")
-        return
+    # First, discover available clients
+    discovered_clients = repository.discover_clients()
 
-    for config_info in configs:
-        location = config_info["location"]
-        status = config_info["status"]
+    if discovered_clients:
+        print("\nDiscovered MCP clients:")
+        for client in discovered_clients:
+            print(f"\n{client['client_name']} ({client['type']})")
+            print(f"  Path: {client['path']}")
+            print(f"  Config type: {client['config_type']}")
+            if client.get("description"):
+                print(f"  Description: {client['description']}")
 
-        print(f"\n{location['name']} ({location.get('type', 'Unknown')})")
-        print(f"  Path: {location['path']}")
-        print(f"  Status: {status}")
+    # Then, scan registered locations
+    configs = repository.scan_configs()
 
-        if config_info["config"] and status == "found":
-            mcp_servers = config_info["config"].get("mcpServers", {})
-            if mcp_servers:
-                print(f"  Servers: {', '.join(mcp_servers.keys())}")
-            else:
-                print("  Servers: none")
+    if configs:
+        print("\nRegistered config locations:")
+        for config_info in configs:
+            location = config_info["location"]
+            status = config_info["status"]
+
+            print(f"\n{location['name']} ({location.get('type', 'Unknown')})")
+            print(f"  Path: {location['path']}")
+            print(f"  Status: {status}")
+
+            if config_info["config"] and status == "found":
+                mcp_servers = config_info["config"].get("mcpServers", {})
+                if mcp_servers:
+                    print(f"  Servers: {', '.join(mcp_servers.keys())}")
+                else:
+                    print("  Servers: none")
+
+    if not discovered_clients and not configs:
+        print("No MCP clients or config locations found.")
 
 
 def handle_status(sync_engine):
@@ -269,8 +287,8 @@ def handle_diff(sync_engine):
             print(f"    Master ({conflict['source']}): {conflict['master']}")
 
 
-def handle_add_location(config_manager, path, name):
-    if config_manager.add_location(path, name):
+def handle_add_location(settings, path, name):
+    if settings.add_location(path, name):
         print(f"Added location: {path}")
         if name:
             print(f"  Name: {name}")
@@ -278,15 +296,16 @@ def handle_add_location(config_manager, path, name):
         print(f"Location already exists: {path}")
 
 
-def handle_remove_location(config_manager, path):
-    if config_manager.remove_location(path):
+def handle_remove_location(settings, path):
+    if settings.remove_location(path):
         print(f"Removed location: {path}")
     else:
         print(f"Location not found: {path}")
 
 
-def handle_list_locations(config_manager):
-    locations = config_manager.get_locations()
+def handle_list_locations(settings):
+    locations_config = settings.get_locations_config()
+    locations = [loc.model_dump() for loc in locations_config.locations]
 
     if not locations:
         print("No registered locations.")
@@ -359,12 +378,16 @@ def handle_add_server(sync_engine, args):
         print("\nCancelled")
 
 
-def _build_server_config_from_args(args):
+def _build_server_config_from_args(args) -> dict[str, Any]:
     """Build server config from inline command arguments"""
-    config = {"command": args.server_cmd}
+    config: dict[str, Any] = {"command": [args.server_cmd]}
 
     if args.args:
-        config["args"] = [arg.strip() for arg in args.args.split(",")]
+        # Split by comma if comma exists, otherwise split by spaces
+        if "," in args.args:
+            config["args"] = [arg.strip() for arg in args.args.split(",")]
+        else:
+            config["args"] = args.args.split()
 
     if args.env:
         env_vars = {}
@@ -393,15 +416,15 @@ def _prompt_for_server_scope():
         return _prompt_for_server_scope()
 
 
-def _prompt_for_server_config(name):
+def _prompt_for_server_config(name) -> dict[str, Any]:
     print(f"\nEnter server configuration for '{name}':")
     command = input("Command: ").strip()
 
-    config = {"command": command}
+    config: dict[str, Any] = {"command": [command]}
 
-    args_input = input("Args (comma-separated): ").strip()
+    args_input = input("Args (space-separated): ").strip()
     if args_input:
-        config["args"] = [arg.strip() for arg in args_input.split(",")]
+        config["args"] = args_input.split()
 
     env_vars = _prompt_for_env_vars()
     if env_vars:
@@ -572,21 +595,23 @@ def handle_template():
     print(json.dumps(template, indent=2))
 
 
-def handle_list_clients(config_manager):
+def handle_list_clients(settings):
     """List all supported clients"""
-    clients = config_manager.client_definitions.get("clients", {})
+    client_definitions = settings.get_client_definitions()
+    clients = client_definitions.clients
 
     if not clients:
         print("No client definitions found.")
         return
 
     print("Supported Clients:")
+    repository = ClientRepository()
     for client_id, client_config in clients.items():
-        name = client_config.get("name", client_id)
-        description = client_config.get("description", "")
+        name = client_config.name
+        description = client_config.description
 
         # Check if client is found on this system
-        location = config_manager._get_client_location(client_id, client_config)
+        location = repository._get_client_location(client_id, client_config)
         status = "✅ Found" if location else "❌ Not found"
 
         print(f"  {client_id}: {name} - {status}")
@@ -594,9 +619,10 @@ def handle_list_clients(config_manager):
             print(f"    {description}")
 
 
-def handle_client_info(config_manager, client_id):
+def handle_client_info(settings, client_id):
     """Show detailed information about a client"""
-    clients = config_manager.client_definitions.get("clients", {})
+    client_definitions = settings.get_client_definitions()
+    clients = client_definitions.clients
 
     if not client_id:
         print("Available clients:")
@@ -610,33 +636,38 @@ def handle_client_info(config_manager, client_id):
         return
 
     client_config = clients[client_id]
-    print(f"Client: {client_config.get('name', client_id)}")
-    print(f"Description: {client_config.get('description', 'No description')}")
+    print(f"Client: {client_config.name}")
+    print(f"Description: {client_config.description or 'No description'}")
 
     print("\nPaths:")
-    for platform, path in client_config.get("paths", {}).items():
-        print(f"  {platform}: {path}")
+    if client_config.paths:
+        for platform, path in client_config.paths.items():
+            print(f"  {platform}: {path}")
 
-    print(f"\nConfig format: {client_config.get('config_format', 'unknown')}")
-    print(f"MCP key: {client_config.get('mcp_key', 'unknown')}")
+    print(f"\nConfig type: {client_config.config_type}")
 
     # Check if found on current system
-    location = config_manager._get_client_location(client_id, client_config)
+    repository = ClientRepository()
+    location = repository._get_client_location(client_id, client_config)
     if location:
         print(f"\n✅ Found on this system: {location['path']}")
     else:
-        platform_name = config_manager._get_platform_name()
-        expected_path = client_config.get("paths", {}).get(platform_name, "unknown")
-        expanded_path = (
-            config_manager._expand_path_template(expected_path)
-            if expected_path != "unknown"
-            else "unknown"
-        )
+        platform_name = repository._get_platform_name()
+        expected_path = "unknown"
+        if client_config.paths:
+            expected_path = client_config.paths.get(platform_name, "unknown")
+        if expected_path == "unknown" and client_config.fallback_paths:
+            expected_path = client_config.fallback_paths.get(platform_name, "unknown")
+
+        if expected_path != "unknown":
+            expanded_path = repository._expand_path_template(expected_path)
+        else:
+            expanded_path = "unknown"
         print("\n❌ Not found on this system")
         print(f"Expected location: {expanded_path}")
 
 
-def handle_edit_client_definitions(config_manager):
+def handle_edit_client_definitions(settings):
     """Open user client definitions file for editing"""
     import logging
     import os
@@ -646,27 +677,28 @@ def handle_edit_client_definitions(config_manager):
     logger = logging.getLogger(__name__)
 
     # Ensure the file exists
-    if not config_manager.user_client_definitions_file.exists():
+    if not settings.user_client_definitions_file.exists():
         # Create with template
-        template = {
-            "clients": {
-                "example-client": {
-                    "name": "Example Client",
-                    "description": "Example client configuration",
-                    "paths": {
+        from .config.models import ClientDefinitions, MCPClientConfig
+
+        template = ClientDefinitions(
+            clients={
+                "example-client": MCPClientConfig(
+                    name="Example Client",
+                    description="Example client configuration",
+                    paths={
                         "darwin": "~/path/to/client/config.json",
                         "windows": "%APPDATA%/Client/config.json",
                         "linux": "~/.config/client/config.json",
                     },
-                    "config_format": "json",
-                    "mcp_key": "mcpServers",
-                }
+                    config_type="file",
+                )
             }
-        }
-        config_manager._save_user_client_definitions(template)
+        )
+        settings._save_user_client_definitions(template)
         print("Created user client definitions file with example.")
 
-    file_path = config_manager.user_client_definitions_file
+    file_path = settings.user_client_definitions_file
     print(f"Opening: {file_path}")
 
     # Try to open with default editor

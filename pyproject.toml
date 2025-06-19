@@ -4,7 +4,11 @@ version = "0.3.3"
 description = "Sync MCP (Model Context Protocol) configurations across AI tools"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "dynaconf>=3.2.11",
+    "platformdirs>=4.3.8",
+    "pydantic>=2.11.7",
+]
 authors = [
     {name = "ztripez", email = "ztripez@users.noreply.github.com"},
 ]
@@ -51,4 +55,5 @@ dev = [
     "ruff>=0.12.0",
     "pre-commit>=4.0.0",
     "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
 ]
