@@ -79,6 +79,11 @@ def create_parser():
     vacuum_parser.add_argument(
         "--auto-resolve", choices=["first", "last"], help="Auto-resolve conflicts without prompts"
     )
+    vacuum_parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Do not overwrite servers already in global config",
+    )
 
     # Project management
     subparsers.add_parser("init", help="Create project .mcp.json")
@@ -143,7 +148,7 @@ def main():
             case "list-servers":
                 handle_list_servers(sync_engine)
             case "vacuum":
-                handle_vacuum(sync_engine)
+                handle_vacuum(sync_engine, args.auto_resolve, args.skip_existing)
             case "init":
                 handle_init()
             case "template":
@@ -516,10 +521,10 @@ def handle_init():
     print("Created .mcp.json in current directory")
 
 
-def handle_vacuum(sync_engine):
+def handle_vacuum(sync_engine, auto_resolve: str | None, skip_existing: bool):
     """Import existing MCP configs from all discovered locations"""
     try:
-        result = sync_engine.vacuum_configs()
+        result = sync_engine.vacuum_configs(auto_resolve=auto_resolve, skip_existing=skip_existing)
 
         if not result.imported_servers and not result.conflicts:
             print("No MCP servers found in any discovered locations.")
@@ -536,6 +541,11 @@ def handle_vacuum(sync_engine):
             print(f"\nResolved {len(result.conflicts)} conflicts:")
             for conflict in result.conflicts:
                 print(f"  {conflict['server']} - kept version from {conflict['chosen_source']}")
+
+        if result.skipped_servers:
+            print(f"\nSkipped {len(result.skipped_servers)} existing servers:")
+            for name in result.skipped_servers:
+                print(f"  {name}")
 
         print("\nVacuum complete! Run 'mcp-sync sync' to standardize all configs.")
 

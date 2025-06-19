@@ -377,3 +377,37 @@ def test_vacuum_saves_to_global_config():
     global_config = config.get_global_config()
     assert "test-server" in global_config["mcpServers"]
     assert global_config["mcpServers"]["test-server"]["command"] == ["echo", "test"]
+
+
+def test_vacuum_auto_resolve_first():
+    """Conflicts should be resolved automatically keeping first seen version"""
+    cli_loc = {"path": "cli:cli", "name": "cli", "config_type": "cli"}
+    file_loc = {"path": "/tmp/f.json", "name": "file", "config_type": "file"}
+
+    config = DummyCLIConfig([cli_loc, file_loc])
+    config.set_cli_servers("cli", {"srv": {"command": ["echo", "cli"]}})
+
+    engine = SyncEngine(config)
+    with patch.object(engine, "_read_json_config") as mock_read:
+        mock_read.return_value = {"mcpServers": {"srv": {"command": ["echo", "file"]}}}
+        with patch.object(engine, "_resolve_conflict") as mock_resolve:
+            result = engine.vacuum_configs(auto_resolve="first")
+            mock_resolve.assert_not_called()
+            assert result.imported_servers["srv"] == "cli"
+            assert result.conflicts[0]["chosen_source"] == "cli"
+            assert result.conflicts[0]["rejected_source"] == "file"
+
+
+def test_vacuum_skip_existing():
+    """Existing global servers are not overwritten when skip_existing is True"""
+    cli_loc = {"path": "cli:code", "name": "code", "config_type": "cli"}
+    config = DummyCLIConfig([cli_loc])
+    config.set_cli_servers("code", {"existing": {"command": ["echo", "new"]}})
+    config.set_global_config({"mcpServers": {"existing": {"command": ["echo", "old"]}}})
+
+    engine = SyncEngine(config)
+    result = engine.vacuum_configs(skip_existing=True)
+
+    assert "existing" in result.skipped_servers
+    assert "existing" not in result.imported_servers
+    assert config.get_global_config()["mcpServers"]["existing"]["command"] == ["echo", "old"]

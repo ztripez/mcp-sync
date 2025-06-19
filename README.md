@@ -91,6 +91,11 @@ cd mcp-sync
 - `mcp-sync remove-server <name> --scope <global|project>` - Remove server with inline scope
 - `mcp-sync list-servers` - Show all managed servers
 
+### Migration
+- `mcp-sync vacuum` - Import MCP servers from discovered configs
+  - `--auto-resolve <first|last>` choose conflict resolution automatically
+  - `--skip-existing` avoid overwriting servers already in global config
+
 **Adding Servers**: When adding a server, you need to provide:
 - **Command**: The executable to run (e.g., `python`, `npx`, `node`)
 - **Arguments**: Command-line arguments (comma-separated, optional)
@@ -221,6 +226,17 @@ uv pip install -e .
 uv run ruff check .     # Linting
 uv run ruff format .    # Formatting
 uv run pytest          # Tests (when available)
+```
+
+### Running Tests
+Tests require the package to be on `PYTHONPATH`. Either install it in editable mode:
+```bash
+uv pip install -e .
+uv run pytest
+```
+or set `PYTHONPATH` manually when invoking pytest:
+```bash
+PYTHONPATH=$PWD uv run pytest
 ```
 
 ## License

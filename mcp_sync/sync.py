@@ -18,6 +18,7 @@ class VacuumResult:
     imported_servers: dict[str, str]  # server_name -> source_location
     conflicts: list[dict[str, Any]]  # resolved conflicts
     errors: list[dict[str, str]]
+    skipped_servers: list[str]
 
 
 class SyncEngine:
@@ -346,9 +347,11 @@ class SyncEngine:
         with open(path, "w") as f:
             json.dump(config, f, indent=2)
 
-    def vacuum_configs(self) -> "VacuumResult":
+    def vacuum_configs(
+        self, auto_resolve: str | None = None, skip_existing: bool = False
+    ) -> "VacuumResult":
         """Import existing MCP configs from all discovered locations"""
-        result = VacuumResult(imported_servers={}, conflicts=[], errors=[])
+        result = VacuumResult(imported_servers={}, conflicts=[], errors=[], skipped_servers=[])
 
         # Get all locations (excluding project .mcp.json files)
         locations = self.config_manager.get_locations()
@@ -366,13 +369,18 @@ class SyncEngine:
                         if server_name in discovered_servers:
                             # Conflict found - need to resolve
                             existing = discovered_servers[server_name]
-                            choice = self._resolve_conflict(
-                                server_name,
-                                existing["config"],
-                                existing["source"],
-                                server_config,
-                                location["name"],
-                            )
+                            if auto_resolve == "first":
+                                choice = "existing"
+                            elif auto_resolve == "last":
+                                choice = "new"
+                            else:
+                                choice = self._resolve_conflict(
+                                    server_name,
+                                    existing["config"],
+                                    existing["source"],
+                                    server_config,
+                                    location["name"],
+                                )
 
                             if choice == "new":
                                 discovered_servers[server_name] = {
@@ -415,13 +423,18 @@ class SyncEngine:
                 if server_name in discovered_servers:
                     # Conflict found - need to resolve
                     existing = discovered_servers[server_name]
-                    choice = self._resolve_conflict(
-                        server_name,
-                        existing["config"],
-                        existing["source"],
-                        server_config,
-                        location["name"],
-                    )
+                    if auto_resolve == "first":
+                        choice = "existing"
+                    elif auto_resolve == "last":
+                        choice = "new"
+                    else:
+                        choice = self._resolve_conflict(
+                            server_name,
+                            existing["config"],
+                            existing["source"],
+                            server_config,
+                            location["name"],
+                        )
 
                     if choice == "new":
                         discovered_servers[server_name] = {
@@ -454,6 +467,9 @@ class SyncEngine:
             global_config = self.config_manager.get_global_config()
 
             for server_name, server_info in discovered_servers.items():
+                if skip_existing and server_name in global_config.get("mcpServers", {}):
+                    result.skipped_servers.append(server_name)
+                    continue
                 global_config["mcpServers"][server_name] = server_info["config"]
                 result.imported_servers[server_name] = server_info["source"]
 
