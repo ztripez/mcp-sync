@@ -71,6 +71,15 @@ def create_parser():
     subparsers.add_parser("init", help="Create project .mcp.json")
     subparsers.add_parser("template", help="Show template config")
 
+    # Client management
+    subparsers.add_parser("list-clients", help="Show all supported clients")
+    subparsers.add_parser("client-info", help="Show detailed client information").add_argument(
+        "client", nargs="?", help="Client ID to show info for"
+    )
+    subparsers.add_parser(
+        "edit-client-definitions", help="Open user client definitions file for editing"
+    )
+
     return parser
 
 
@@ -112,6 +121,12 @@ def main():
             handle_init()
         case "template":
             handle_template()
+        case "list-clients":
+            handle_list_clients(config_manager)
+        case "client-info":
+            handle_client_info(config_manager, args.client)
+        case "edit-client-definitions":
+            handle_edit_client_definitions(config_manager)
         case _:
             print(f"Unknown command: {args.command}")
             sys.exit(1)
@@ -487,6 +502,117 @@ def handle_template():
 
     print("MCP Configuration Template:")
     print(json.dumps(template, indent=2))
+
+
+def handle_list_clients(config_manager):
+    """List all supported clients"""
+    clients = config_manager.client_definitions.get("clients", {})
+
+    if not clients:
+        print("No client definitions found.")
+        return
+
+    print("Supported Clients:")
+    for client_id, client_config in clients.items():
+        name = client_config.get("name", client_id)
+        description = client_config.get("description", "")
+
+        # Check if client is found on this system
+        location = config_manager._get_client_location(client_id, client_config)
+        status = "✅ Found" if location else "❌ Not found"
+
+        print(f"  {client_id}: {name} - {status}")
+        if description:
+            print(f"    {description}")
+
+
+def handle_client_info(config_manager, client_id):
+    """Show detailed information about a client"""
+    clients = config_manager.client_definitions.get("clients", {})
+
+    if not client_id:
+        print("Available clients:")
+        for cid in clients.keys():
+            print(f"  {cid}")
+        return
+
+    if client_id not in clients:
+        print(f"Client '{client_id}' not found.")
+        print("Use 'mcp-sync list-clients' to see available clients.")
+        return
+
+    client_config = clients[client_id]
+    print(f"Client: {client_config.get('name', client_id)}")
+    print(f"Description: {client_config.get('description', 'No description')}")
+
+    print("\nPaths:")
+    for platform, path in client_config.get("paths", {}).items():
+        print(f"  {platform}: {path}")
+
+    print(f"\nConfig format: {client_config.get('config_format', 'unknown')}")
+    print(f"MCP key: {client_config.get('mcp_key', 'unknown')}")
+
+    # Check if found on current system
+    location = config_manager._get_client_location(client_id, client_config)
+    if location:
+        print(f"\n✅ Found on this system: {location['path']}")
+    else:
+        platform_name = config_manager._get_platform_name()
+        expected_path = client_config.get("paths", {}).get(platform_name, "unknown")
+        expanded_path = (
+            config_manager._expand_path_template(expected_path)
+            if expected_path != "unknown"
+            else "unknown"
+        )
+        print("\n❌ Not found on this system")
+        print(f"Expected location: {expanded_path}")
+
+
+def handle_edit_client_definitions(config_manager):
+    """Open user client definitions file for editing"""
+    import os
+    import subprocess
+
+    # Ensure the file exists
+    if not config_manager.user_client_definitions_file.exists():
+        # Create with template
+        template = {
+            "clients": {
+                "example-client": {
+                    "name": "Example Client",
+                    "description": "Example client configuration",
+                    "paths": {
+                        "darwin": "~/path/to/client/config.json",
+                        "windows": "%APPDATA%/Client/config.json",
+                        "linux": "~/.config/client/config.json",
+                    },
+                    "config_format": "json",
+                    "mcp_key": "mcpServers",
+                }
+            }
+        }
+        config_manager._save_user_client_definitions(template)
+        print("Created user client definitions file with example.")
+
+    file_path = config_manager.user_client_definitions_file
+    print(f"Opening: {file_path}")
+
+    # Try to open with default editor
+    editor = os.environ.get("EDITOR", "nano")
+
+    # Basic validation to prevent command injection
+    if not editor or " " in editor or ";" in editor or "&" in editor:
+        print(f"Invalid editor: {editor}")
+        print(f"Please manually edit: {file_path}")
+        return
+
+    try:
+        subprocess.run([editor, str(file_path)], check=True)  # noqa: S603
+        print("Client definitions updated. Run 'mcp-sync scan' to reload.")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"Could not open editor '{editor}'.")
+        print(f"Please manually edit: {file_path}")
+        print("Or set the EDITOR environment variable to your preferred editor.")
 
 
 if __name__ == "__main__":
