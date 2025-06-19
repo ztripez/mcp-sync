@@ -48,7 +48,7 @@ def create_parser():
     # Server management
     add_server_parser = subparsers.add_parser("add-server", help="Add MCP server to sync")
     add_server_parser.add_argument("name", help="Server name")
-    add_server_parser.add_argument("--command", help="Command to run the server")
+    add_server_parser.add_argument("--cmd", dest="server_cmd", help="Command to run the server")
     add_server_parser.add_argument("--args", help="Command arguments (comma-separated)")
     add_server_parser.add_argument("--env", help="Environment variables (KEY=value,KEY2=value2)")
     add_server_parser.add_argument("--scope", choices=["global", "project"], help="Config scope")
@@ -262,7 +262,7 @@ def handle_add_server(sync_engine, args):
 
     try:
         # Check if inline parameters provided
-        if args.command and args.scope:
+        if args.server_cmd and args.scope:
             # Inline mode
             scope = args.scope
             config = _build_server_config_from_args(args)
@@ -283,7 +283,7 @@ def handle_add_server(sync_engine, args):
 
 def _build_server_config_from_args(args):
     """Build server config from inline command arguments"""
-    config = {"command": args.command}
+    config = {"command": args.server_cmd}
 
     if args.args:
         config["args"] = [arg.strip() for arg in args.args.split(",")]
