@@ -39,7 +39,7 @@ class Settings:
 
     def _ensure_config_dir(self) -> None:
         """Ensure configuration directory and files exist."""
-        self.config_dir.mkdir(exist_ok=True)
+        self.config_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize locations file if it doesn't exist
         if not self.locations_file.exists():
