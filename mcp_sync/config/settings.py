@@ -86,6 +86,19 @@ class Settings:
         try:
             with open(self.global_config_file) as f:
                 data = json.load(f)
+
+            # Migrate old format to new format
+            if "mcpServers" in data:
+                migrated_servers = {}
+                for name, config in data["mcpServers"].items():
+                    migrated_config = self._migrate_server_config(config)
+                    migrated_servers[name] = migrated_config
+                data["mcpServers"] = migrated_servers
+
+                # Save the migrated config back to file
+                self._save_global_config(GlobalConfig(**data))
+                logger.info("Migrated global config to new format")
+
             return GlobalConfig(**data)
         except (OSError, json.JSONDecodeError, ValidationError) as e:
             logger.warning(f"Error loading global config: {e}")
@@ -95,6 +108,29 @@ class Settings:
         """Save global configuration."""
         with open(self.global_config_file, "w") as f:
             json.dump(config.model_dump(), f, indent=2)
+
+    def _migrate_server_config(self, config: dict) -> dict:
+        """Migrate old server config format to new format."""
+        migrated = config.copy()
+
+        # Ensure args and env exist first
+        if "args" not in migrated or migrated["args"] is None:
+            migrated["args"] = []
+        if "env" not in migrated or migrated["env"] is None:
+            migrated["env"] = {}
+
+        # Convert command from array to string + args
+        if "command" in migrated and isinstance(migrated["command"], list):
+            command_list = migrated["command"]
+            if command_list:
+                migrated["command"] = command_list[0]
+                # Safely concatenate - migrated["args"] is guaranteed to be a list now
+                migrated["args"] = command_list[1:] + migrated["args"]
+            else:
+                migrated["command"] = ""
+                # migrated["args"] stays as is (already a list)
+
+        return migrated
 
     def get_client_definitions(self) -> ClientDefinitions:
         """Get merged client definitions (built-in + user)."""

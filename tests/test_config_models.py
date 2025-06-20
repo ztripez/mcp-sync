@@ -18,8 +18,8 @@ from mcp_sync.config.models import (
 def valid_server_config():
     """Valid MCPServerConfig data."""
     return {
-        "command": ["python", "-m", "server"],
-        "args": ["--port", "8080"],
+        "command": "python",
+        "args": ["-m", "server", "--port", "8080"],
         "env": {"DEBUG": "true", "PORT": "8080"},
     }
 
@@ -56,30 +56,30 @@ class TestMCPServerConfig:
     def test_valid_configuration_creation(self, valid_server_config):
         """Test creating valid MCPServerConfig."""
         config = MCPServerConfig(**valid_server_config)
-        assert config.command == ["python", "-m", "server"]
-        assert config.args == ["--port", "8080"]
+        assert config.command == "python"
+        assert config.args == ["-m", "server", "--port", "8080"]
         assert config.env == {"DEBUG": "true", "PORT": "8080"}
 
     def test_minimal_valid_configuration(self):
         """Test creating MCPServerConfig with minimal required fields."""
-        config = MCPServerConfig(command=["echo", "test"])
-        assert config.command == ["echo", "test"]
-        assert config.args is None
-        assert config.env is None
+        config = MCPServerConfig(command="echo")
+        assert config.command == "echo"
+        assert config.args == []
+        assert config.env == {}
 
     def test_command_field_validation_non_empty(self):
         """Test that command field cannot be empty."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command=[])
+            MCPServerConfig(command="")
 
         error = exc_info.value.errors()[0]
         assert error["type"] == "value_error"
         assert "Command cannot be empty" in str(exc_info.value)
 
-    def test_command_field_validation_empty_first_element(self):
-        """Test that first command element cannot be empty."""
+    def test_command_field_validation_whitespace_only(self):
+        """Test that command cannot be whitespace only."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command=["", "arg"])
+            MCPServerConfig(command="   ")
 
         error = exc_info.value.errors()[0]
         assert error["type"] == "value_error"
@@ -87,32 +87,32 @@ class TestMCPServerConfig:
 
     def test_optional_args_field(self):
         """Test optional args field handling."""
-        config = MCPServerConfig(command=["test"])
-        assert config.args is None
+        config = MCPServerConfig(command="test")
+        assert config.args == []
 
-        config_with_args = MCPServerConfig(command=["test"], args=["--verbose"])
+        config_with_args = MCPServerConfig(command="test", args=["--verbose"])
         assert config_with_args.args == ["--verbose"]
 
     def test_optional_env_field(self):
         """Test optional env field handling."""
-        config = MCPServerConfig(command=["test"])
-        assert config.env is None
+        config = MCPServerConfig(command="test")
+        assert config.env == {}
 
-        config_with_env = MCPServerConfig(command=["test"], env={"KEY": "value"})
+        config_with_env = MCPServerConfig(command="test", env={"KEY": "value"})
         assert config_with_env.env == {"KEY": "value"}
 
     def test_invalid_command_type(self):
         """Test validation error for wrong command type."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command="not a list")  # type: ignore
+            MCPServerConfig(command=123)  # type: ignore
 
         error = exc_info.value.errors()[0]
-        assert error["type"] == "list_type"
+        assert error["type"] == "string_type"
 
     def test_invalid_args_type(self):
         """Test validation error for wrong args type."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command=["test"], args="not a list")  # type: ignore
+            MCPServerConfig(command="test", args="not a list")  # type: ignore
 
         error = exc_info.value.errors()[0]
         assert error["type"] == "list_type"
@@ -120,7 +120,7 @@ class TestMCPServerConfig:
     def test_invalid_env_type(self):
         """Test validation error for wrong env type."""
         with pytest.raises(ValidationError) as exc_info:
-            MCPServerConfig(command=["test"], env=["not", "a", "dict"])  # type: ignore
+            MCPServerConfig(command="test", env=["not", "a", "dict"])  # type: ignore
 
         error = exc_info.value.errors()[0]
         assert error["type"] == "dict_type"
@@ -321,7 +321,7 @@ class TestGlobalConfig:
         config = GlobalConfig(mcpServers={"test-server": MCPServerConfig(**valid_server_config)})
         assert "test-server" in config.mcpServers
         assert isinstance(config.mcpServers["test-server"], MCPServerConfig)
-        assert config.mcpServers["test-server"].command == ["python", "-m", "server"]
+        assert config.mcpServers["test-server"].command == "python"
 
     def test_empty_configuration(self):
         """Test creating empty GlobalConfig with default factory."""
@@ -344,7 +344,7 @@ class TestGlobalConfig:
     def test_nested_server_config_validation(self):
         """Test nested MCPServerConfig validation."""
         with pytest.raises(ValidationError) as exc_info:
-            GlobalConfig(mcpServers={"invalid": {"command": []}})  # type: ignore
+            GlobalConfig(mcpServers={"invalid": {"command": ""}})  # type: ignore
 
         # Should have validation error for nested MCPServerConfig
         assert "Command cannot be empty" in str(exc_info.value)
@@ -353,14 +353,14 @@ class TestGlobalConfig:
         """Test configuration with multiple servers."""
         config = GlobalConfig(
             mcpServers={
-                "server1": MCPServerConfig(command=["echo", "test1"]),
-                "server2": MCPServerConfig(command=["echo", "test2"], args=["--verbose"]),
+                "server1": MCPServerConfig(command="echo", args=["test1"]),
+                "server2": MCPServerConfig(command="echo", args=["test2", "--verbose"]),
             }
         )
         assert len(config.mcpServers) == 2
         assert "server1" in config.mcpServers
         assert "server2" in config.mcpServers
-        assert config.mcpServers["server2"].args == ["--verbose"]
+        assert config.mcpServers["server2"].args == ["test2", "--verbose"]
 
     def test_invalid_servers_type(self):
         """Test validation error for wrong mcpServers type."""
@@ -532,17 +532,17 @@ class TestEdgeCases:
         global_config = GlobalConfig(
             mcpServers={
                 "server1": MCPServerConfig(
-                    command=["python", "-m", "server1"],
-                    args=["--port", "8080"],
+                    command="python",
+                    args=["-m", "server1", "--port", "8080"],
                     env={"DEBUG": "true"},
                 ),
-                "server2": MCPServerConfig(command=["echo", "server2"]),
+                "server2": MCPServerConfig(command="echo", args=["server2"]),
             }
         )
 
         assert len(global_config.mcpServers) == 2
         assert global_config.mcpServers["server1"].env == {"DEBUG": "true"}
-        assert global_config.mcpServers["server2"].args is None
+        assert global_config.mcpServers["server2"].args == ["server2"]
 
     def test_model_serialization_roundtrip(self, valid_server_config):
         """Test that models can be serialized and deserialized."""

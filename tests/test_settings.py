@@ -64,8 +64,8 @@ def sample_global_config():
     return GlobalConfig(
         mcpServers={
             "test-server": MCPServerConfig(
-                command=["python", "-m", "test_server"],
-                args=["--port", "8080"],
+                command="python",
+                args=["-m", "test_server", "--port", "8080"],
                 env={"DEBUG": "true"},
             )
         }
@@ -222,7 +222,7 @@ class TestConfigurationLoading:
         config = mock_settings.get_global_config()
         assert isinstance(config, GlobalConfig)
         assert "test-server" in config.mcpServers
-        assert config.mcpServers["test-server"].command == ["python", "-m", "test_server"]
+        assert config.mcpServers["test-server"].command == "python"
 
     def test_get_global_config_missing_file(self, mock_settings):
         """Test loading global config when file doesn't exist."""
@@ -407,7 +407,7 @@ class TestConfigurationSaving:
 
         assert "mcpServers" in data
         assert "test-server" in data["mcpServers"]
-        assert data["mcpServers"]["test-server"]["command"] == ["python", "-m", "test_server"]
+        assert data["mcpServers"]["test-server"]["command"] == "python"
 
     def test_save_user_client_definitions(self, mock_settings, sample_client_definitions):
         """Test saving user client definitions."""

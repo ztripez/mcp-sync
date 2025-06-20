@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field, field_validator
 class MCPServerConfig(BaseModel):
     """Configuration for an MCP server."""
 
-    command: list[str] = Field(..., description="Command to run the server")
-    args: list[str] | None = Field(default=None, description="Additional arguments")
-    env: dict[str, str] | None = Field(default=None, description="Environment variables")
+    command: str = Field(..., description="Command to run the server")
+    args: list[str] = Field(default_factory=list, description="Additional arguments")
+    env: dict[str, str] = Field(default_factory=dict, description="Environment variables")
 
     @field_validator("command")
     @classmethod
     def validate_command(cls, v):
-        if not v or not v[0]:
+        if not v or not v.strip():
             raise ValueError("Command cannot be empty")
         return v
 

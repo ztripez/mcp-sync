@@ -231,10 +231,19 @@ class SyncEngine:
                 master_config.pop("_source", None)
 
                 # For CLI, we need to compare normalized command arrays
-                current_cmd = config.get("command", [])
+                # Normalize current command to array format for comparison
+                current_cmd_raw = config.get("command", [])
+                current_args = config.get("args", []) or []
+                if isinstance(current_cmd_raw, str):
+                    current_cmd = [current_cmd_raw] + current_args
+                elif isinstance(current_cmd_raw, list):
+                    current_cmd = current_cmd_raw + current_args
+                else:
+                    current_cmd = current_args
+
+                # Normalize master command to array format
                 master_config_cmd = master_config.get("command", [])
                 master_config_args = master_config.get("args", []) or []
-                # Normalize master command to array format
                 if isinstance(master_config_cmd, str):
                     master_cmd = [master_config_cmd] + master_config_args
                 elif isinstance(master_config_cmd, list):
@@ -280,7 +289,15 @@ class SyncEngine:
         if not changes_needed:
             for name in new_command_servers:
                 if name in current_command_servers:
-                    current_cmd = current_command_servers[name].get("command", [])
+                    # Normalize current command to array format for comparison
+                    current_cmd_raw = current_command_servers[name].get("command", [])
+                    current_args = current_command_servers[name].get("args", []) or []
+                    if isinstance(current_cmd_raw, str):
+                        current_cmd = [current_cmd_raw] + current_args
+                    elif isinstance(current_cmd_raw, list):
+                        current_cmd = current_cmd_raw + current_args
+                    else:
+                        current_cmd = current_args
 
                     # Normalize new server command to array format
                     new_config_cmd = new_command_servers[name].get("command", [])
@@ -605,8 +622,19 @@ class SyncEngine:
                     continue
 
                 # Normalize command format for MCPServerConfig validation
-                if "command" in config_data and isinstance(config_data["command"], str):
-                    config_data["command"] = [config_data["command"]]
+                # Command should be a string, args should be an array
+                if "command" in config_data and isinstance(config_data["command"], list):
+                    # Convert array format [cmd, arg1, arg2] to string command + args array
+                    if config_data["command"]:
+                        command_list = config_data["command"]
+                        config_data["command"] = command_list[0]
+                        config_data["args"] = command_list[1:] + config_data.get("args", [])
+
+                # Ensure args and env are properly formatted
+                if "args" not in config_data:
+                    config_data["args"] = []
+                if "env" not in config_data:
+                    config_data["env"] = {}
 
                 try:
                     server_config = MCPServerConfig(**config_data)

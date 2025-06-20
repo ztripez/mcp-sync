@@ -101,8 +101,8 @@ def test_sync_cli_location_add_servers():
 
     # Set up master servers
     master_servers = {
-        "server1": {"command": ["echo", "test1"], "_source": "global"},
-        "server2": {"command": ["echo", "test2"], "_source": "global"},
+        "server1": {"command": "echo", "args": ["test1"], "env": {}, "_source": "global"},
+        "server2": {"command": "echo", "args": ["test2"], "env": {}, "_source": "global"},
     }
 
     # Set up CLI location with no existing servers
@@ -140,15 +140,15 @@ def test_sync_cli_location_remove_servers():
 
     # Set up existing CLI servers
     existing_servers = {
-        "server1": {"command": ["echo", "test1"]},
-        "server2": {"command": ["echo", "test2"]},
-        "server3": {"command": ["echo", "test3"]},
+        "server1": {"command": "echo", "args": ["test1"], "env": {}},
+        "server2": {"command": "echo", "args": ["test2"], "env": {}},
+        "server3": {"command": "echo", "args": ["test3"], "env": {}},
     }
 
     # Master only has server1 and server2 (server3 should be removed)
     master_servers = {
-        "server1": {"command": ["echo", "test1"], "_source": "global"},
-        "server2": {"command": ["echo", "test2"], "_source": "global"},
+        "server1": {"command": "echo", "args": ["test1"], "env": {}, "_source": "global"},
+        "server2": {"command": "echo", "args": ["test2"], "env": {}, "_source": "global"},
     }
 
     cli_location = {"path": "cli:claude-code", "name": "claude-code", "config_type": "cli"}
@@ -186,10 +186,12 @@ def test_sync_cli_location_detect_conflicts():
     engine = SyncEngine(settings)
 
     # Set up existing CLI server with different command
-    existing_servers = {"server1": {"command": ["echo", "old-command"]}}
+    existing_servers = {"server1": {"command": "echo", "args": ["old-command"], "env": {}}}
 
     # Master has same server with different command
-    master_servers = {"server1": {"command": ["echo", "new-command"], "_source": "global"}}
+    master_servers = {
+        "server1": {"command": "echo", "args": ["new-command"], "env": {}, "_source": "global"}
+    }
 
     cli_location = {"path": "cli:claude-code", "name": "claude-code", "config_type": "cli"}
 
@@ -224,14 +226,14 @@ def test_sync_cli_location_no_changes_needed():
 
     # Set up CLI servers that match master exactly
     existing_servers = {
-        "server1": {"command": ["echo", "test1"]},
-        "server2": {"command": ["echo", "test2"]},
+        "server1": {"command": "echo", "args": ["test1"], "env": {}},
+        "server2": {"command": "echo", "args": ["test2"], "env": {}},
     }
 
     # Master has same servers
     master_servers = {
-        "server1": {"command": ["echo", "test1"], "_source": "global"},
-        "server2": {"command": ["echo", "test2"], "_source": "global"},
+        "server1": {"command": "echo", "args": ["test1"], "env": {}, "_source": "global"},
+        "server2": {"command": "echo", "args": ["test2"], "env": {}, "_source": "global"},
     }
 
     cli_location = {"path": "cli:claude-code", "name": "claude-code", "config_type": "cli"}
@@ -264,10 +266,12 @@ def test_sync_cli_location_dry_run():
     engine = SyncEngine(settings)
 
     # Set up existing server to be removed
-    existing_servers = {"old-server": {"command": ["echo", "old"]}}
+    existing_servers = {"old-server": {"command": "echo", "args": ["old"], "env": {}}}
 
     # Master has different server
-    master_servers = {"new-server": {"command": ["echo", "new"], "_source": "global"}}
+    master_servers = {
+        "new-server": {"command": "echo", "args": ["new"], "env": {}, "_source": "global"}
+    }
 
     cli_location = {"path": "cli:claude-code", "name": "claude-code", "config_type": "cli"}
 
@@ -362,8 +366,8 @@ def test_vacuum_includes_cli_clients():
 
     # Add some servers to CLI client
     cli_servers = {
-        "cli-server1": {"command": ["echo", "cli1"]},
-        "cli-server2": {"command": ["echo", "cli2"]},
+        "cli-server1": {"command": "echo", "args": ["cli1"], "env": {}},
+        "cli-server2": {"command": "echo", "args": ["cli2"], "env": {}},
     }
 
     engine = SyncEngine(settings)
@@ -379,8 +383,8 @@ def test_vacuum_includes_cli_clients():
                 # Mock file config with servers
                 mock_read.return_value = {
                     "mcpServers": {
-                        "file-server1": {"command": ["echo", "file1"]},
-                        "file-server2": {"command": ["echo", "file2"]},
+                        "file-server1": {"command": "echo", "args": ["file1"], "env": {}},
+                        "file-server2": {"command": "echo", "args": ["file2"], "env": {}},
                     }
                 }
 
@@ -427,7 +431,7 @@ def test_vacuum_cli_conflict_resolution():
     )
 
     # Both clients have same server name but different configs
-    cli_servers = {"shared-server": {"command": ["echo", "from-cli"]}}
+    cli_servers = {"shared-server": {"command": "echo", "args": ["from-cli"], "env": {}}}
 
     engine = SyncEngine(settings)
 
@@ -439,7 +443,9 @@ def test_vacuum_cli_conflict_resolution():
         with patch.object(engine, "_read_json_config") as mock_read:
             with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
                 mock_read.return_value = {
-                    "mcpServers": {"shared-server": {"command": ["echo", "from-file"]}}
+                    "mcpServers": {
+                        "shared-server": {"command": "echo", "args": ["from-file"], "env": {}}
+                    }
                 }
 
                 # Mock conflict resolution to choose CLI version (new)
@@ -451,10 +457,16 @@ def test_vacuum_cli_conflict_resolution():
                     args = mock_resolve.call_args[0]
                     assert args[0] == "shared-server"  # server name
                     assert args[1] == {
-                        "command": ["echo", "from-cli"]
+                        "command": "echo",
+                        "args": ["from-cli"],
+                        "env": {},
                     }  # existing (CLI processed first)  # noqa: E501
                     assert args[2] == "claude-code"  # existing source
-                    assert args[3] == {"command": ["echo", "from-file"]}  # new (file)
+                    assert args[3] == {
+                        "command": "echo",
+                        "args": ["from-file"],
+                        "env": {},
+                    }  # new (file)
                     assert args[4] == "test-file"  # new source
 
                     # Should have one conflict in results
@@ -520,7 +532,7 @@ def test_vacuum_saves_to_global_config():
         }
     )
     settings = MockSettings(locations=[cli_location], client_definitions=client_definitions)
-    cli_servers = {"test-server": {"command": ["echo", "test"]}}
+    cli_servers = {"test-server": {"command": "echo", "args": ["test"], "env": {}}}
 
     engine = SyncEngine(settings)
 
@@ -539,7 +551,7 @@ def test_vacuum_saves_to_global_config():
             # Should save to global config
             global_config = settings.get_global_config()
             assert "test-server" in global_config.mcpServers
-            assert global_config.mcpServers["test-server"].command == ["echo", "test"]
+            assert global_config.mcpServers["test-server"].command == "echo"
 
 
 def test_vacuum_auto_resolve_first():
@@ -555,7 +567,7 @@ def test_vacuum_auto_resolve_first():
         }
     )
     settings = MockSettings(locations=[cli_loc, file_loc], client_definitions=client_definitions)
-    cli_servers = {"srv": {"command": ["echo", "cli"]}}
+    cli_servers = {"srv": {"command": "echo", "args": ["cli"], "env": {}}}
 
     engine = SyncEngine(settings)
 
@@ -566,7 +578,9 @@ def test_vacuum_auto_resolve_first():
 
         with patch.object(engine, "_read_json_config") as mock_read:
             with patch.object(engine.executor, "get_mcp_servers", return_value=cli_servers):
-                mock_read.return_value = {"mcpServers": {"srv": {"command": ["echo", "file"]}}}
+                mock_read.return_value = {
+                    "mcpServers": {"srv": {"command": "echo", "args": ["file"], "env": {}}}
+                }
                 with patch.object(engine, "_resolve_conflict") as mock_resolve:
                     result = engine.vacuum_configs(auto_resolve="first")
                     mock_resolve.assert_not_called()
@@ -588,12 +602,14 @@ def test_vacuum_skip_existing():
     )
 
     # Set up global config with existing server
-    global_config = GlobalConfig(mcpServers={"existing": MCPServerConfig(command=["echo", "old"])})
+    global_config = GlobalConfig(
+        mcpServers={"existing": MCPServerConfig(command="echo", args=["old"])}
+    )
     settings = MockSettings(
         locations=[cli_loc], global_config=global_config, client_definitions=client_definitions
     )
 
-    cli_servers = {"existing": {"command": ["echo", "new"]}}
+    cli_servers = {"existing": {"command": "echo", "args": ["new"], "env": {}}}
 
     engine = SyncEngine(settings)
 
@@ -607,4 +623,4 @@ def test_vacuum_skip_existing():
 
             assert "existing" in result.skipped_servers
             assert "existing" not in result.imported_servers
-            assert settings.get_global_config().mcpServers["existing"].command == ["echo", "old"]
+            assert settings.get_global_config().mcpServers["existing"].command == "echo"
