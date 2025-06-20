@@ -233,7 +233,7 @@ class SyncEngine:
                 # For CLI, we need to compare normalized command arrays
                 current_cmd = config.get("command", [])
                 master_config_cmd = master_config.get("command", [])
-                master_config_args = master_config.get("args", [])
+                master_config_args = master_config.get("args", []) or []
                 # Normalize master command to array format
                 if isinstance(master_config_cmd, str):
                     master_cmd = [master_config_cmd] + master_config_args
@@ -284,7 +284,7 @@ class SyncEngine:
 
                     # Normalize new server command to array format
                     new_config_cmd = new_command_servers[name].get("command", [])
-                    new_config_args = new_command_servers[name].get("args", [])
+                    new_config_args = new_command_servers[name].get("args", []) or []
                     if isinstance(new_config_cmd, str):
                         new_cmd = [new_config_cmd] + new_config_args
                     elif isinstance(new_config_cmd, list):
@@ -320,7 +320,7 @@ class SyncEngine:
                             continue
 
                         command = config.get("command", [])
-                        args = config.get("args", [])
+                        args = config.get("args", []) or []
                         env_vars = config.get("env", {})
 
                         # Build full command array - combine command and args
